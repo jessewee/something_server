@@ -42,9 +42,9 @@ def test_api():
 # 获取帖子列表
 @forum.route('/get_posts', methods=['GET'])
 def get_posts():
-    data_idx = request.values.get('data_idx')
-    data_count = request.values.get('data_count')
-    sort_by = request.values.get('sort_by')
+    data_idx = int(request.values.get('data_idx'))
+    data_count = int(request.values.get('data_count'))
+    sort_by = int(request.values.get('sort_by'))
     search_content = request.values.get('search_content')
     labels = request.values.get('labels')
     users = request.values.get('users')
@@ -69,16 +69,21 @@ def get_posts():
         sql_part_sort = 'ORDER BY p.date DESC'
     # 筛选条件
     sql_part_condition = ''
-    if search_content != None:
-        sql_part_condition += f'''(text LIKE '%{search_content}%' OR name LIKE '%{search_content}%')'''
-    if labels != None:
+    if search_content != None and len(search_content) > 0:
+        sql_part_condition += f'''(WHERE text LIKE '%{search_content}%' OR name LIKE '%{search_content}%')'''
+    if labels != None and len(labels) > 0:
         tmp = labels.replace(',', '\',\'')
-        sql_part_condition += f'''label IN ('{tmp}')'''
-    if users != None:
-        tmp = users.replace(',', '\',\'')
-        sql_part_condition += f'''poster_id IN ('{tmp}')'''
-    if len(sql_part_condition) > 0:
-        sql_part_condition = f'WHERE {sql_part_condition}'
+        tmp = f'''label IN ('{tmp}')'''
+        if len(sql_part_condition) > 0:
+            sql_part_condition += f' AND {tmp}'
+        else:
+            sql_part_condition += f'WHERE {tmp}'
+    if users != None and len(users) > 0:
+        tmp = f'''poster_id IN ({users})'''
+        if len(sql_part_condition) > 0:
+            sql_part_condition += f' AND {tmp}'
+        else:
+            sql_part_condition += f'WHERE {tmp}'
     # 执行查询
     cursor.execute(f'''
     SELECT p.id,
