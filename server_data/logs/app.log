@@ -577,3 +577,4 @@ LINE 1: SELECT id FROM user WHERE account = 'sdfsdfsf'
 2020-11-10 03:11:39,678 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', AttributeError("'NoneType' object has no attribute 'strip'"))
 2020-11-10 03:12:07,182 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', AttributeError("'NoneType' object has no attribute 'strip'"))
 2020-11-10 03:15:42,653 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', TypeError('Object of type datetime is not JSON serializable'))
+2020-11-10 07:48:24,990 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', <BadRequestKeyError '400: Bad Request'>)
