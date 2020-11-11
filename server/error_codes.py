@@ -26,7 +26,9 @@ code_messages = {
     # 验证码不能为空
     10016: '验证码不能为空',
     # 验证码不正确
-    10017: '验证码不正确'
+    10017: '验证码不正确',
+    # 没有收到文件数据
+    10020: '没有收到文件数据'
 }
 
 
@@ -57,6 +59,8 @@ class Codes(IntEnum):
     VF_CODE_EMPTY = 10016
     # 验证码不正确
     VF_CODE_INCORRECT = 10017
+    # 没有收到文件数据
+    NO_FILE_RECEIVED = 10020
 
     def msg(self):
         msg = code_messages.get(self.value)

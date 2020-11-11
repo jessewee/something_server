@@ -6,6 +6,7 @@ import logging
 from flask import Blueprint, request, session
 from pub import *
 from error_codes import Codes
+from PIL import Image
 
 
 __all__ = ['base']
@@ -51,8 +52,10 @@ def get_vf_code():
         return response_json(Codes.EMAIL_EMPTY)
     code = random.randint(100000, 999999)
     db = connect_db()
-    db.cursor().execute(
-        f'''INSERT INTO vf_code(email, code) VALUES('{email}', '{code}')''')
+    db.cursor().execute(f'''
+        INSERT INTO vf_code(email, code) 
+        VALUES('{email}', '{code}')
+        ''')
     db.commit()
     db.close()
     send_email(email, 'something验证码', f'您的验证码是：{code}，10分钟内有效')
@@ -68,8 +71,11 @@ def register():
         return response_json(Codes.ACCOUNT_EMPTY)
     db = connect_db()
     cursor = db.cursor()
-    cursor.execute(
-        f'''SELECT id FROM public.user WHERE account = '{account}' ''')
+    cursor.execute(f'''
+        SELECT id 
+        FROM public.user 
+        WHERE account = '{account}'
+        ''')
     rows = cursor.fetchall()
     if rows != None and len(rows) > 0:
         db.close()
@@ -86,16 +92,21 @@ def register():
             return response_json(Codes.VF_CODE_EMPTY)
         # 判断验证码
         cursor = db.cursor()
-        cursor.execute(
-            # 600秒，10分钟
-            f'''SELECT email FROM vf_code WHERE code = '{vfcode}' AND email = '{email}' AND EXTRACT(epoch FROM now() - date) < 600''')
+        # 600秒，10分钟
+        cursor.execute(f'''
+            SELECT email 
+            FROM vf_code 
+            WHERE code = '{vfcode}' AND email = '{email}' AND EXTRACT(epoch FROM now() - date) < 600
+            ''')
         rows = cursor.fetchall()
         if rows == None or len(rows) == 0:
             db.close()
             return response_json(Codes.VF_CODE_INCORRECT)
     # 处理
-    db.cursor().execute(
-        f'''INSERT INTO public.user(account, pwd, email) values('{account}', '{pwd}', '{email}')''')
+    db.cursor().execute(f'''
+        INSERT INTO public.user(account, pwd, email) 
+        values('{account}', '{pwd}', '{email}')
+        ''')
     db.commit()
     db.close()
     # 返回结果
@@ -112,17 +123,17 @@ def reset_pwd():
     db = connect_db()
     cursor = db.cursor()
     cursor.execute(f'''
-    SELECT 
-        id, 
-        (
-            SELECT code FROM vf_code 
-            WHERE u.email = email AND EXTRACT(epoch FROM now() - date) < 6000 
-            ORDER BY date DESC
-            LIMIT 1
-        ) AS vf_code
-    FROM public.user u
-    WHERE account = '{account}'
-    ''')
+        SELECT 
+            id, 
+            (
+                SELECT code FROM vf_code 
+                WHERE u.email = email AND EXTRACT(epoch FROM now() - date) < 6000 
+                ORDER BY date DESC
+                LIMIT 1
+            ) AS vf_code
+        FROM public.user u
+        WHERE account = '{account}'
+        ''')
     rows = cursor.fetchall()
     if rows == None or len(rows) == 0:
         db.close()
@@ -140,8 +151,11 @@ def reset_pwd():
         db.close()
         return response_json(Codes.VF_CODE_INCORRECT)
     # 处理
-    db.cursor().execute(
-        f'''UPDATE public.user SET pwd = '{pwd}' WHERE account = '{account}' ''')
+    db.cursor().execute(f'''
+        UPDATE public.user 
+        SET pwd = '{pwd}' 
+        WHERE account = '{account}'
+        ''')
     db.commit()
     db.close()
     # 返回结果
@@ -159,8 +173,11 @@ def login():
         return response_json(Codes.PWD_EMPTY)
     db = connect_db()
     cursor = db.cursor()
-    cursor.execute(
-        f'''SELECT id,pwd FROM public.user WHERE account = '{account}' ''')
+    cursor.execute(f'''
+        SELECT id,pwd 
+        FROM public.user 
+        WHERE account = '{account}'
+        ''')
     rows = cursor.fetchall()
     if rows == None or len(rows) == 0:
         db.close()
@@ -177,8 +194,7 @@ def login():
     session['refresh_token_time'] = time_in_seconds
     session['token'] = token
     session['token_time'] = time_in_seconds
-    db.cursor().execute(
-        f'''
+    db.cursor().execute(f'''
         UPDATE public.user 
         SET refresh_token = '{refresh_token}', refresh_token_time = {time_in_seconds}
         WHERE account = '{account}'
@@ -196,8 +212,11 @@ def get_user_info():
         return response_json(Codes.REFRESH_TOKEN_INVALID)
     db = connect_db()
     cursor = db.cursor()
-    cursor.execute(
-        f'''SELECT name,avatar,avatar_thumb,gender,birthday,register_date,email FROM public.user WHERE id = {user_id}''')
+    cursor.execute(f'''
+        SELECT name,avatar,avatar_thumb,gender,birthday,register_date,email 
+        FROM public.user 
+        WHERE id = {user_id}
+        ''')
     rows = cursor.fetchall()
     if rows == None or len(rows) == 0:
         db.close()
@@ -213,3 +232,56 @@ def get_user_info():
     }
     db.close()
     return response_json(Codes.SUCCESS, result)
+
+
+# 上传文件，只考虑一次上传一个文件的情况
+@base.route('/upload', methods=['POST'])
+def upload():
+    if request.files == None or len(request.files) == 0:
+        return response_json(Codes.NO_FILE_RECEIVED)
+    file = request.files['file']
+    file_data = file.read()
+    if len(file_data) == 0:
+        return response_json(Codes.NO_FILE_RECEIVED)
+    file_type = request.values.get('type')
+    # 源文件保存到本地时的文件名
+    file_name_head = time.strftime(r'%y%m%d%H%M%S', time.localtime())
+    file_name = file_name_head + str(time.time()).split('.')[1]
+    thumb_file_path = None
+    # 图片文件
+    if file_type == 'image':
+        file_path = f'data/images/{file_name}{file.filename[-4:]}'
+        file.save(file_path)
+        # 获取缩略图
+        im = Image.open(file_path)
+        if im.size[0] > 360:
+            target_h = im.size[1] / im.size[0] * 360
+            im.thumbnail((360, target_h))
+            thumb_file_path = f'{file_path[:-4]}_thumb{file_path[-4:]}'
+            im.save(thumb_file_path)
+    # 视频文件
+    elif file_type == 'video':
+        file_path = f'data/videos/{file_name}{file.filename[-4:]}'
+        file.save(file_path)
+        # TODO 视频缩略图
+        thumb_file_path = ''
+    # 音频文件
+    elif file_type == 'voice':
+        file_path = f'data/others/{file_name}{file.filename[-4:]}'
+        file.save(file_path)
+    # 未知类型
+    else:
+        file_type = 'unknown'
+        file_path = f'data/others/{file_name}{file.filename[-4:]}'
+        file.save(file_path)
+    # 保存信息到数据库
+    db = connect_db()
+    cursor = db.cursor()
+    if thumb_file_path == None:
+        thumb_file_path = file_path
+    cursor.execute(f'''
+        INSERT INTO public.files(type,url,thumb_url) 
+        VALUES('{file_type}','{file_path}','{thumb_file_path}')
+        ''')
+    db.commit()
+    db.close()

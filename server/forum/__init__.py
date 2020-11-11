@@ -86,26 +86,26 @@ def get_posts():
             sql_part_condition += f'WHERE {tmp}'
     # 执行查询
     cursor.execute(f'''
-    SELECT p.id,
-           poster_id,
-           date,
-           text,
-           medias,
-           like_count,
-           dislike_count,
-           reply_count,
-           name,
-           avatar,
-           avatar_thumb,
-           label,
-           {sql_part_attitude_post_followed}
-    FROM forum.post p
-    LEFT JOIN public.user u ON p.poster_id = u.id
-    LEFT JOIN forum.post_label l ON p.label_id = l.id
-    {sql_part_condition}
-    {sql_part_sort}
-    LIMIT {data_count} OFFSET {data_idx}
-    ''')
+        SELECT p.id,
+            poster_id,
+            date,
+            text,
+            medias,
+            like_count,
+            dislike_count,
+            reply_count,
+            name,
+            avatar,
+            avatar_thumb,
+            label,
+            {sql_part_attitude_post_followed}
+        FROM forum.post p
+        LEFT JOIN public.user u ON p.poster_id = u.id
+        LEFT JOIN forum.post_label l ON p.label_id = l.id
+        {sql_part_condition}
+        {sql_part_sort}
+        LIMIT {data_count} OFFSET {data_idx}
+        ''')
     rows = cursor.fetchall()
     posts = []
     if rows != None and len(rows) > 0:
@@ -114,8 +114,11 @@ def get_posts():
             tmp = r[4]
             medias = []
             c = db.cursor()
-            c.execute(
-                f'SELECT type,url,thumb_url,width,height FROM public.files WHERE id IN ({tmp})')
+            c.execute(f'''
+                SELECT type,url,thumb_url,width,height 
+                FROM public.files 
+                WHERE id IN ({tmp})
+                ''')
             tmp = c.fetchall()
             if tmp != None and len(tmp) > 0:
                 for t in tmp:
