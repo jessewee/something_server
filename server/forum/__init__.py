@@ -566,7 +566,56 @@ def reply():
     # 结果
     db.commit()
     db.close()
-    return response_json(Codes.SUCCESS)
+    return response_json(Codes.SUCCESS, resp_data)
+
+
+# 发帖
+@forum.route('/post', methods=['POST'])
+def post():
+    user_id = session.get('user_id')
+    label = request.values.get('label')
+    text = request.values.get('text')
+    medias = request.values.get('medias')
+    resp_data = {}
+    db = connect_db()
+    cursor = db.cursor()
+    # 先查看label
+    label_id = None
+    if is_not_empty_str(label):
+        cursor.execute(
+            f'''SELECT id FROM forum.post_label WHERE label = '%{label}%' LIMIT 1''')
+        tmp = cursor.fetchall()
+        if is_not_empty_collection(tmp):
+            label_id = tmp[0][0]
+            cursor.execute(
+                f'''UPDATE forum.post_label SET usage = usage+1 WHERE id = {label_id})''')
+        else:
+            cursor.execute(f'''
+            INSERT INTO forum.post_label(label) VALUES('{label}')
+            RETURNING id
+            ''')
+            label_id = cursor.fetchone()[0]
+    # 添加post数据
+    cursor.execute(f'''
+        INSERT INTO forum.post(
+            poster_id,
+            text,
+            medias,
+            label_id
+        )
+        VALUES(
+            {user_id},
+            '{text}',
+            {medias},
+            {label_id}
+        )
+        RETURNING id
+        ''')
+    resp_data = cursor.fetchone()[0]
+    # 结果
+    db.commit()
+    db.close()
+    return response_json(Codes.SUCCESS, resp_data)
 
 
 # post、floor、inner_floor中查出来的medias是files表里的id的列表，这个转换成对应数据
