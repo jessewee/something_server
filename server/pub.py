@@ -22,6 +22,13 @@ def is_not_empty_str(e):
     return len(e) > 0
 
 
+def is_all_empty_str(*vare):
+    for e in vare:
+        if is_not_empty_str(e):
+            return False
+    return True
+
+
 # 检查列表或元组的长度是否为0，有None判断
 def is_empty_collection(e):
     if e == None or (type(e) != list and type(e) != tuple):

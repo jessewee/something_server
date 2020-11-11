@@ -39,8 +39,8 @@ logW = lambda *msgs: logger.warning(msgs)
 logE = lambda *msgs: logger.error(msgs)
 
 # 不需要检查token的接口
-apis_without_token = ['/', '/forum', '/login', '/get_vf_code',
-                      '/register', '/reset_pwd', '/forum/get_posts']
+apis_without_token = ['/', '/login', '/get_vf_code', '/register', '/reset_pwd', '/forum',
+                      '/forum/get_posts', '/forum/get_floors', '/forum/get_inner_floors', '/forum/get_post_labels']
 
 
 # 通过refresh_token重新获取token

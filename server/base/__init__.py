@@ -234,6 +234,61 @@ def get_user_info():
     return response_json(Codes.SUCCESS, result)
 
 
+# 修改用户信息
+@base.route('/update_user_info', methods=['PUT'])
+def update_user_info():
+    user_id = session.get('user_id')
+    name = request.values.get('name')
+    avatar = request.values.get('avatar')
+    avatar_thumb = request.values.get('avatar_thumb')
+    gender = request.values.get('gender')
+    birthday = request.values.get('birthday')
+    register_date = request.values.get('register_date')
+    email = request.values.get('email')
+    if is_all_empty_str(name, avatar, avatar_thumb, gender, birthday, register_date, email):
+        return response_json(Codes.PARAM_INCORRECT)
+    sql_part_value = ''
+    if is_not_empty_str(name):
+        sql_part_value = f'name={name}'
+    if is_not_empty_str(avatar):
+        if len(sql_part_value) == 0:
+            sql_part_value = f'avatar={avatar}'
+        else:
+            sql_part_value += f',avatar={avatar}'
+    if is_not_empty_str(avatar_thumb):
+        if len(sql_part_value) == 0:
+            sql_part_value = f'avatar_thumb={avatar_thumb}'
+        else:
+            sql_part_value += f',avatar_thumb={avatar_thumb}'
+    if is_not_empty_str(gender):
+        if len(sql_part_value) == 0:
+            sql_part_value = f'gender={gender}'
+        else:
+            sql_part_value += f',gender={gender}'
+    if is_not_empty_str(birthday):
+        if len(sql_part_value) == 0:
+            sql_part_value = f'birthday={birthday}'
+        else:
+            sql_part_value += f',birthday={birthday}'
+    if is_not_empty_str(register_date):
+        if len(sql_part_value) == 0:
+            sql_part_value = f'register_date={register_date}'
+        else:
+            sql_part_value += f',register_date={register_date}'
+    if is_not_empty_str(email):
+        if len(sql_part_value) == 0:
+            sql_part_value = f'email={email}'
+        else:
+            sql_part_value += f',email={email}'
+    db = connect_db()
+    cursor = db.cursor()
+    cursor.execute(
+        f'UPDATE public.user SET {sql_part_value} WHERE id = {user_id}')
+    db.commit()
+    db.close()
+    return response_json(Codes.SUCCESS)
+
+
 # 上传文件，只考虑一次上传一个文件的情况
 @base.route('/upload', methods=['POST'])
 def upload():

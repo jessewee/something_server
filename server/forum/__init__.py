@@ -89,17 +89,39 @@ def follow():
         WHERE from_user_id = {user_id} AND to_user_id = {target_user_id}
         ''')
     existed = is_not_empty_collection(cursor.fetchall())
+    # 添加关注
     if follow == True and existed != True:
         db.execute(f'''
             INSERT INTO forum.following(from_user_id,to_user_id)
             VALUES({user_id},{target_user_id})
         ''')
-        db.commit()
+        db.execute(f'''
+            UPDATE forum.user_forum_info 
+            SET follower_count = follower_count+1 
+            WHERE user_id = {target_user_id}
+            ''')
+        db.execute(f'''
+            UPDATE forum.user_forum_info 
+            SET following_count = follower_count+1 
+            WHERE user_id = {user_id}
+            ''')
+    # 删除关注
     elif existed == True:
         db.execute(f'''
             DELETE FROM forum.following 
             WHERE from_user_id = {user_id} AND to_user_id = {target_user_id}
             ''')
+        db.execute(f'''
+            UPDATE forum.user_forum_info 
+            SET follower_count = follower_count-1 
+            WHERE user_id = {target_user_id}
+            ''')
+        db.execute(f'''
+            UPDATE forum.user_forum_info 
+            SET following_count = follower_count-1 
+            WHERE user_id = {user_id}
+            ''')
+    db.commit()
     db.close()
     return response_json(Codes.SUCCESS)
 
@@ -512,6 +534,12 @@ def reply():
         id_floor = cursor.fetchone()
         resp_data['floor_id'] = id_floor[0]
         resp_data['floor'] = id_floor[1]
+        # 帖子信息里增加回复的计数
+        db.execute(f'''
+            UPDATE forum.post 
+            SET reply_count = reply_count+1 
+            WHERE id = {post_id}
+            ''')
     # 回复楼层
     if is_not_empty_str(floor_id):
         cursor.execute(f'''
@@ -535,14 +563,25 @@ def reply():
         id_inner_floor = cursor.fetchone()
         resp_data['inner_floor_id'] = id_inner_floor[0]
         resp_data['inner_floor'] = id_inner_floor[1]
+        # 楼层信息里增加回复的计数
+        db.execute(f'''
+            UPDATE forum.floor 
+            SET reply_count = reply_count+1 
+            WHERE id = {floor_id}
+            ''')
     # 层内回复
     if is_not_empty_str(inner_floor_id):
+        # 查找对应的floor_id
+        cursor.execute(
+            f'SELECT floor_id FROM forum.inner_floor WHERE id = {inner_floor_id}')
+        tmp = cursor.fetchall()
+        floor_id = tmp[0][0]
+        # 添加数据
         cursor.execute(f'''
-            WITH floor_info AS (SELECT floor_id FROM forum.inner_floor WHERE id = {inner_floor_id})
             WITH max_inner_floor AS (
                 SELECT max(inner_floor), 
                 FROM forum.inner_floor 
-                WHERE floor_id = (SELECT floor_id FROM floor_info)
+                WHERE floor_id = {floor_id}
             )
             INSERT INTO forum.inner_floor(
                 poster_id,
@@ -556,13 +595,19 @@ def reply():
                 '{text}',
                 {medias},
                 (SELECT (CASE WHEN max IS NULL THEN 1 ELSE max+1 END) FROM max_inner_floor),
-                (SELECT floor_id FROM floor_info)
+                {floor_id}
             )
             RETURNING id,inner_floor
             ''')
         id_inner_floor = cursor.fetchone()
         resp_data['inner_floor_id'] = id_inner_floor[0]
         resp_data['inner_floor'] = id_inner_floor[1]
+        # 楼层信息里增加回复的计数
+        db.execute(f'''
+            UPDATE forum.floor 
+            SET reply_count = reply_count+1 
+            WHERE id = {floor_id}
+            ''')
     # 结果
     db.commit()
     db.close()
