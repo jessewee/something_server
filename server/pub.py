@@ -9,6 +9,32 @@ import datetime
 DEBUG = True
 
 
+# 检查字符串的长度是否为0，有None判断
+def is_empty_str(e):
+    if e == None or type(e) != str:
+        return True
+    return len(e) == 0
+
+
+def is_not_empty_str(e):
+    if e == None or type(e) != str:
+        return False
+    return len(e) > 0
+
+
+# 检查列表或元组的长度是否为0，有None判断
+def is_empty_collection(e):
+    if e == None or (type(e) != list and type(e) != tuple):
+        return True
+    return len(e) == 0
+
+
+def is_not_empty_collection(e):
+    if e == None or (type(e) != list and type(e) != tuple):
+        return False
+    return len(e) > 0
+
+
 # 创建数据库连接
 def connect_db():
     conn = psycopg2.connect(

@@ -8,9 +8,13 @@ code_messages = {
     # 成功
     0: '操作成功',
     # refreshToken失效
-    10000: 'token失效，请重新登录',
+    100: 'token失效，请重新登录',
     # token失效
-    10001: 'token失效，请重新登录',
+    101: 'token失效，请重新登录',
+    # 参数错误
+    110: '参数错误',
+    # 没有收到文件数据
+    111: '没有收到文件数据',
     # 账号不能为空
     10010: '账号不能为空',
     # 账号不存在
@@ -26,9 +30,7 @@ code_messages = {
     # 验证码不能为空
     10016: '验证码不能为空',
     # 验证码不正确
-    10017: '验证码不正确',
-    # 没有收到文件数据
-    10020: '没有收到文件数据'
+    10017: '验证码不正确'
 }
 
 
@@ -40,9 +42,13 @@ class Codes(IntEnum):
     # 成功
     SUCCESS = 0
     # token失效
-    TOKEN_INVALID = 10001
+    TOKEN_INVALID = 101
     # refresh_token失效
-    REFRESH_TOKEN_INVALID = 10000
+    REFRESH_TOKEN_INVALID = 100
+    # 参数错误
+    PARAM_INCORRECT = 110
+    # 没有收到文件数据
+    NO_FILE_RECEIVED = 111
     # 账号不能为空
     ACCOUNT_EMPTY = 10010
     # 账号不存在
@@ -59,8 +65,6 @@ class Codes(IntEnum):
     VF_CODE_EMPTY = 10016
     # 验证码不正确
     VF_CODE_INCORRECT = 10017
-    # 没有收到文件数据
-    NO_FILE_RECEIVED = 10020
 
     def msg(self):
         msg = code_messages.get(self.value)

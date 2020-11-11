@@ -6,7 +6,7 @@ from forum import forum
 import time
 import uuid
 import os
-from pub import response_json, connect_db, DEBUG
+from pub import response_json, connect_db, DEBUG, is_empty_collection
 from error_codes import Codes
 
 
@@ -61,7 +61,7 @@ def refresh_token_and_generate_new():
         cursor.execute(
             f'''SELECT id,account,refresh_token_time FROM public.user WHERE refresh_token = '{refresh_token}' ''')
         rows = cursor.fetchall()
-        if rows == None or len(rows) == 0:
+        if is_empty_collection(rows):
             db.close()
             return response_json(Codes.REFRESH_TOKEN_INVALID)
         account = rows[0][1]

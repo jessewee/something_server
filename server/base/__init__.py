@@ -48,7 +48,7 @@ def test_api():
 @base.route('/get_vf_code', methods=['GET'])
 def get_vf_code():
     email = request.args.get('email')
-    if type(email) != str or len(email) == 0:
+    if is_empty_str(email):
         return response_json(Codes.EMAIL_EMPTY)
     code = random.randint(100000, 999999)
     db = connect_db()
@@ -67,7 +67,7 @@ def get_vf_code():
 def register():
     # 账号
     account = request.values.get('account')
-    if type(account) != str or len(account) == 0:
+    if is_empty_str(account):
         return response_json(Codes.ACCOUNT_EMPTY)
     db = connect_db()
     cursor = db.cursor()
@@ -77,18 +77,18 @@ def register():
         WHERE account = '{account}'
         ''')
     rows = cursor.fetchall()
-    if rows != None and len(rows) > 0:
+    if is_not_empty_collection(rows):
         db.close()
         return response_json(Codes.ACCOUNT_EXIST)
     # 密码
     pwd = request.values.get('pwd')
-    if type(pwd) != str or len(pwd) == 0:
+    if is_empty_str(pwd):
         return response_json(Codes.PWD_EMPTY)
     # 邮箱和验证码
     email = request.values.get('email')
     vfcode = request.values.get('vfcode')
-    if type(email) == str and len(email) > 0:
-        if type(vfcode) != str or len(vfcode) == 0:
+    if is_empty_str(email):
+        if is_empty_str(vfcode):
             return response_json(Codes.VF_CODE_EMPTY)
         # 判断验证码
         cursor = db.cursor()
@@ -99,7 +99,7 @@ def register():
             WHERE code = '{vfcode}' AND email = '{email}' AND EXTRACT(epoch FROM now() - date) < 600
             ''')
         rows = cursor.fetchall()
-        if rows == None or len(rows) == 0:
+        if is_empty_collection(rows):
             db.close()
             return response_json(Codes.VF_CODE_INCORRECT)
     # 处理
@@ -118,7 +118,7 @@ def register():
 def reset_pwd():
     # 账号
     account = request.values.get('account')
-    if type(account) != str or len(account) == 0:
+    if is_empty_str(account):
         return response_json(Codes.ACCOUNT_EMPTY)
     db = connect_db()
     cursor = db.cursor()
@@ -135,16 +135,16 @@ def reset_pwd():
         WHERE account = '{account}'
         ''')
     rows = cursor.fetchall()
-    if rows == None or len(rows) == 0:
+    if is_empty_collection(rows):
         db.close()
         return response_json(Codes.ACCOUNT_NOT_EXIST)
     # 密码
     pwd = request.values.get('pwd')
-    if type(pwd) != str or len(pwd) == 0:
+    if is_empty_str(pwd):
         return response_json(Codes.PWD_EMPTY)
     # 验证码
     vfcode = request.values.get('vfcode')
-    if type(vfcode) != str or len(vfcode) == 0:
+    if is_empty_str(vfcode):
         return response_json(Codes.VF_CODE_EMPTY)
     # 判断验证码
     if rows[0][1] != vfcode:
@@ -179,7 +179,7 @@ def login():
         WHERE account = '{account}'
         ''')
     rows = cursor.fetchall()
-    if rows == None or len(rows) == 0:
+    if is_empty_collection(rows):
         db.close()
         return response_json(Codes.ACCOUNT_NOT_EXIST)
     if rows[0][1] != pwd:
@@ -218,7 +218,7 @@ def get_user_info():
         WHERE id = {user_id}
         ''')
     rows = cursor.fetchall()
-    if rows == None or len(rows) == 0:
+    if is_empty_collection(rows):
         db.close()
         return response_json(Codes.REFRESH_TOKEN_INVALID)
     result = {
@@ -282,6 +282,15 @@ def upload():
     cursor.execute(f'''
         INSERT INTO public.files(type,url,thumb_url) 
         VALUES('{file_type}','{file_path}','{thumb_file_path}')
+        RETURNING id
         ''')
+    info = cursor.fetchone()
+    resp_data = {
+        'id': info[0],
+        'type': file_type,
+        'url': file_path,
+        'thumb_url': thumb_file_path
+    }
     db.commit()
     db.close()
+    return response_json(Codes.SUCCESS, resp_data)
