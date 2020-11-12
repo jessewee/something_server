@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: wsj1989
       PGDATA: /home/pgdata
     ports:
-      - 8081:5432
+      - 21211:5432
     volumes:
       - ./pgdata:/home/pgdata
 
@@ -21,7 +21,7 @@ services:
       POSTGRES_PORT: 5432
       # MAIL_PASSWORD: ${MAIL_PASSWORD}
     ports:
-      - 8080:5000
+      - 21210:5000
     volumes:
       - ./server_data:/home/server/data
     depends_on:
