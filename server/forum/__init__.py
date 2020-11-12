@@ -39,19 +39,30 @@ def test_api():
     return f'你发送到forum的内容是{content}'
 
 
-# 获取关注人列表
+# 获取关注人列表，简略信息
 @forum.route('/get_followings', methods=['GET'])
 def get_followings():
+    target_user_id = request.value.get('target_user_id')
     search_content = request.values.get('search_content')
     db = connect_db()
     cursor = db.cursor()
     user_id = session['user_id']
+    if target_user_id == None:
+        target_user_id = user_id
+    if target_user_id == user_id:
+        sql_part_followed = 'true AS followed'
+    else:
+        sql_part_followed = f'''
+            (
+                SELECT COUNT(id) FROM forum.following 
+                WHERE to_user_id = f.to_user_id AND from_user_id = {user_id}
+            ) > 0 AS followed
+            '''
     sql_text = f'''
-    SELECT u.id,name,avatar,avatar_thumb,gender,birthday,register_date,follower_count,following_count
+    SELECT u.id,name,avatar,avatar_thumb,gender,{sql_part_followed}
     FROM forum.following f
-    LEFT JOIN forum.user_forum_info i ON f.to_user_id = i.id
     LEFT JOIN public.user u ON f.to_user_id = u.id
-    WHERE f.from_user_id = {user_id}
+    WHERE f.from_user_id = {target_user_id}
     '''
     if is_not_empty_str(search_content):
         sql_text += f''' AND name LIKE '%{search_content}%' '''
@@ -66,13 +77,67 @@ def get_followings():
                 'avatar': r[2],
                 'avatar_thumb': r[3],
                 'gender': r[4],
-                'birthday': r[5],
-                'register_date': r[6],
-                'follower_count': r[7],
-                'following_coun': r[8]
+                'followed': r[5]
             })
     db.close()
     return response_json(Codes.SUCCESS, users)
+
+
+# 获取粉丝列表，简略信息
+@forum.route('/get_followers', methods=['GET'])
+def get_followers():
+    target_user_id = request.value.get('target_user_id')
+    search_content = request.values.get('search_content')
+    data_idx = int(request.values.get('data_idx'))
+    data_count = int(request.values.get('data_count'))
+    db = connect_db()
+    cursor = db.cursor()
+    user_id = session['user_id']
+    if target_user_id == None:
+        target_user_id = user_id
+    sql_text = f'''
+    SELECT 
+        u.id,
+        name,
+        avatar,
+        avatar_thumb,
+        gender,
+        (
+            SELECT COUNT(id) FROM forum.following 
+            WHERE to_user_id = f.from_user_id AND from_user_id = {user_id}
+        ) > 0 AS followed
+    FROM forum.following f
+    LEFT JOIN public.user u ON f.from_user_id = u.id
+    WHERE f.to_user_id = {target_user_id}
+    LIMIT {data_count} OFFSET {data_idx}
+    '''
+    if is_not_empty_str(search_content):
+        sql_text += f''' AND name LIKE '%{search_content}%' '''
+    cursor.execute(sql_text)
+    rows = cursor.fetchall()
+    users = []
+    if is_not_empty_collection(rows):
+        for r in rows:
+            users.append({
+                'id': r[0],
+                'name': r[1],
+                'avatar': r[2],
+                'avatar_thumb': r[3],
+                'gender': r[4],
+                'followed': r[5]
+            })
+    db.close()
+    # 查总数
+    cursor.execute(
+        f'SELECT COUNT(id) FROM forum.following WHERE to_user_id = {target_user_id}')
+    rows = cursor.fetchall()
+    total_cnt = rows[0][0]
+    db.close()
+    return response_json(Codes.SUCCESS, {
+        'list': users,
+        'total_count': total_cnt,
+        'last_data_index': data_idx
+    })
 
 
 # 关注用户
@@ -497,6 +562,26 @@ def get_inner_floors():
     })
 
 
+# post、floor、inner_floor中查出来的medias是files表里的id的列表，这个转换成对应数据
+def map_medias(db, src):
+    medias = []
+    cursor = db.cursor()
+    cursor.execute(f'''
+        SELECT type,url,thumb_url 
+        FROM public.files 
+        WHERE id IN ({src})
+        ''')
+    rows = cursor.fetchall()
+    if is_not_empty_collection(rows):
+        for r in rows:
+            medias.append({
+                'type': r[0],
+                'url': r[1],
+                'thumb_url': r[2]
+            })
+    return medias
+
+
 # 回复post、floor、inner_floor
 @forum.route('/reply', methods=['POST'])
 def reply():
@@ -608,6 +693,12 @@ def reply():
             SET reply_count = reply_count+1 
             WHERE id = {floor_id}
             ''')
+    # 添加回复计数
+    db.execute(f'''
+        UPDATE forum.user_forum_info 
+        SET reply_count = reply_count+1 
+        WHERE user_id = {user_id}
+        ''')
     # 结果
     db.commit()
     db.close()
@@ -657,27 +748,72 @@ def post():
         RETURNING id
         ''')
     resp_data = cursor.fetchone()[0]
+    # 添加回复计数
+    db.execute(f'''
+        UPDATE forum.user_forum_info 
+        SET post_count = post_count+1 
+        WHERE user_id = {user_id}
+        ''')
     # 结果
     db.commit()
     db.close()
     return response_json(Codes.SUCCESS, resp_data)
 
 
-# post、floor、inner_floor中查出来的medias是files表里的id的列表，这个转换成对应数据
-def map_medias(db, src):
-    medias = []
+# 获取用户信息
+@forum.route('/get_user_info', methods=['GET'])
+def get_user_info():
+    target_user_id = request.values.get('user_id')
+    if target_user_id == None:
+        return response_json(Codes.PARAM_INCORRECT)
+    user_id = session.get('user_id')
+    sql_part_followed = None
+    if is_empty_str(user_id):
+        sql_part_followed = 'false AS followed'
+    else:
+        sql_part_followed = f'''
+            (
+                SELECT COUNT(id) FROM forum.following 
+                WHERE to_user_id = {target_user_id} AND from_user_id = {user_id}
+            ) > 0 AS followed
+            '''
+    db = connect_db()
     cursor = db.cursor()
     cursor.execute(f'''
-        SELECT type,url,thumb_url 
-        FROM public.files 
-        WHERE id IN ({src})
+        SELECT 
+            name,
+            avatar,
+            avatar_thumb,
+            gender,
+            birthday,
+            register_date,
+            email,
+            follower_count,
+            following_count,
+            {sql_part_followed},
+            post_count,
+            reply_count
+        FROM public.user u
+        LEFT JOIN forum.user_forum_info f ON f.user_id = u.id
+        WHERE id = {target_user_id}
         ''')
     rows = cursor.fetchall()
-    if is_not_empty_collection(rows):
-        for r in rows:
-            medias.append({
-                'type': r[0],
-                'url': r[1],
-                'thumb_url': r[2]
-            })
-    return medias
+    if is_empty_collection(rows):
+        db.close()
+        return response_json(Codes.REFRESH_TOKEN_INVALID)
+    result = {
+        'name': rows[0][0],
+        'avatar': rows[0][1],
+        'avatar_thumb': rows[0][2],
+        'gender': rows[0][3],
+        'birthday': rows[0][4],
+        'register_date': rows[0][5],
+        'email': rows[0][6],
+        'follower_count': rows[0][6],
+        'following_count': rows[0][6],
+        'followed': rows[0][6],
+        'post_count': rows[0][6],
+        'reply_count': rows[0][6]
+    }
+    db.close()
+    return response_json(Codes.SUCCESS, result)

@@ -104,8 +104,8 @@ def register():
             return response_json(Codes.VF_CODE_INCORRECT)
     # 处理
     db.cursor().execute(f'''
-        INSERT INTO public.user(account, pwd, email) 
-        values('{account}', '{pwd}', '{email}')
+        INSERT INTO public.user(name,account, pwd, email) 
+        values('{account}','{account}','{pwd}','{email}')
         ''')
     db.commit()
     db.close()
