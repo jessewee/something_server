@@ -18,7 +18,7 @@ services:
     restart: always
     environment:
       POSTGRES_HOST: db
-      POSTGRES_PORT: 5432
+      POSTGRES_PORT: 5432 # 这个是上边db的端口
       # MAIL_PASSWORD: ${MAIL_PASSWORD}
     ports:
       - 21210:5000
