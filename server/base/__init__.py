@@ -213,7 +213,7 @@ def get_user_info():
     db = connect_db()
     cursor = db.cursor()
     cursor.execute(f'''
-        SELECT name,avatar,avatar_thumb,gender,birthday,register_date,email 
+        SELECT name,avatar,avatar_thumb,gender,birthday,register_date,email,remark 
         FROM public.user 
         WHERE id = {user_id}
         ''')
@@ -228,7 +228,8 @@ def get_user_info():
         'gender': rows[0][3],
         'birthday': rows[0][4],
         'register_date': rows[0][5],
-        'email': rows[0][6]
+        'email': rows[0][6],
+        'remark': rows[0][7]
     }
     db.close()
     return response_json(Codes.SUCCESS, result)
@@ -245,7 +246,8 @@ def update_user_info():
     birthday = request.values.get('birthday')
     register_date = request.values.get('register_date')
     email = request.values.get('email')
-    if is_all_empty_str(name, avatar, avatar_thumb, gender, birthday, register_date, email):
+    remark = request.values.get('remark')
+    if is_all_empty_str(name, avatar, avatar_thumb, gender, birthday, register_date, email, remark):
         return response_json(Codes.PARAM_INCORRECT)
     db = connect_db()
     cursor = db.cursor()
@@ -290,6 +292,11 @@ def update_user_info():
             sql_part_value = f'email={email}'
         else:
             sql_part_value += f',email={email}'
+    if is_not_empty_str(remark):
+        if len(sql_part_value) == 0:
+            sql_part_value = f'remark={remark}'
+        else:
+            sql_part_value += f',remark={remark}'
     cursor.execute(
         f'UPDATE public.user SET {sql_part_value} WHERE id = {user_id}')
     db.commit()
