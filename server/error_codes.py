@@ -30,7 +30,9 @@ code_messages = {
     # 验证码不能为空
     10016: '验证码不能为空',
     # 验证码不正确
-    10017: '验证码不正确'
+    10017: '验证码不正确',
+    # 昵称已存在
+    10018: '昵称已存在'
 }
 
 
@@ -65,6 +67,8 @@ class Codes(IntEnum):
     VF_CODE_EMPTY = 10016
     # 验证码不正确
     VF_CODE_INCORRECT = 10017
+    # 昵称已存在
+    NAME_EXISTED = 10018
 
     def msg(self):
         msg = code_messages.get(self.value)

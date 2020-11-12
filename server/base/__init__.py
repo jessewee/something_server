@@ -247,6 +247,16 @@ def update_user_info():
     email = request.values.get('email')
     if is_all_empty_str(name, avatar, avatar_thumb, gender, birthday, register_date, email):
         return response_json(Codes.PARAM_INCORRECT)
+    db = connect_db()
+    cursor = db.cursor()
+    # 检查重名
+    cursor.execute(
+        f'''SELECT COUNT(id) FROM public.user WHERE name = '{name}' ''')
+    existed = cursor.fetchall()
+    if is_not_empty_collection(existed):
+        db.close()
+        return response_json(Codes.NAME_EXISTED)
+    # 组装sql
     sql_part_value = ''
     if is_not_empty_str(name):
         sql_part_value = f'name={name}'
@@ -280,8 +290,6 @@ def update_user_info():
             sql_part_value = f'email={email}'
         else:
             sql_part_value += f',email={email}'
-    db = connect_db()
-    cursor = db.cursor()
     cursor.execute(
         f'UPDATE public.user SET {sql_part_value} WHERE id = {user_id}')
     db.commit()
