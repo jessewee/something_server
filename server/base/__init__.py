@@ -213,7 +213,7 @@ def get_user_info():
     db = connect_db()
     cursor = db.cursor()
     cursor.execute(f'''
-        SELECT name,avatar,avatar_thumb,gender,birthday,register_date,email,remark 
+        SELECT id,name,avatar,avatar_thumb,gender,birthday,register_date,email,remark 
         FROM public.user 
         WHERE id = {user_id}
         ''')
@@ -222,14 +222,15 @@ def get_user_info():
         db.close()
         return response_json(Codes.REFRESH_TOKEN_INVALID)
     result = {
-        'name': rows[0][0],
-        'avatar': rows[0][1],
-        'avatar_thumb': rows[0][2],
-        'gender': rows[0][3],
-        'birthday': rows[0][4],
-        'register_date': rows[0][5],
-        'email': rows[0][6],
-        'remark': rows[0][7]
+        'id': rows[0][0],
+        'name': rows[0][1],
+        'avatar': rows[0][2],
+        'avatar_thumb': rows[0][3],
+        'gender': rows[0][4],
+        'birthday': rows[0][5],
+        'register_date': rows[0][6],
+        'email': rows[0][7],
+        'remark': rows[0][8]
     }
     db.close()
     return response_json(Codes.SUCCESS, result)

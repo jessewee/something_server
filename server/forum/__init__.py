@@ -781,6 +781,7 @@ def get_user_info():
     cursor = db.cursor()
     cursor.execute(f'''
         SELECT 
+            id,
             name,
             avatar,
             avatar_thumb,
@@ -802,18 +803,19 @@ def get_user_info():
         db.close()
         return response_json(Codes.REFRESH_TOKEN_INVALID)
     result = {
-        'name': rows[0][0],
-        'avatar': rows[0][1],
-        'avatar_thumb': rows[0][2],
-        'gender': rows[0][3],
-        'birthday': rows[0][4],
-        'register_date': rows[0][5],
-        'email': rows[0][6],
-        'follower_count': rows[0][6],
-        'following_count': rows[0][6],
-        'followed': rows[0][6],
-        'post_count': rows[0][6],
-        'reply_count': rows[0][6]
+        'id': rows[0][0],
+        'name': rows[0][1],
+        'avatar': rows[0][2],
+        'avatar_thumb': rows[0][3],
+        'gender': rows[0][4],
+        'birthday': rows[0][5],
+        'register_date': rows[0][6],
+        'email': rows[0][7],
+        'follower_count': rows[0][8],
+        'following_count': rows[0][9],
+        'followed': rows[0][10],
+        'post_count': rows[0][11],
+        'reply_count': rows[0][12]
     }
     db.close()
     return response_json(Codes.SUCCESS, result)
