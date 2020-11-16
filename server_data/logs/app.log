@@ -606,3 +606,4 @@ LINE 1: SELECT id FROM user WHERE account = 'sdfsdfsf'
 2020-11-11 06:51:56,082 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', <BadRequestKeyError '400: Bad Request'>)
 2020-11-11 06:51:56,165 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', <BadRequestKeyError '400: Bad Request'>)
 2020-11-11 08:03:48,150 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', <BadRequestKeyError '400: Bad Request'>)
+2020-11-16 08:56:26,975 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', AttributeError("'Request' object has no attribute 'value'"))

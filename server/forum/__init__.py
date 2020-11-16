@@ -86,7 +86,7 @@ def get_followings():
 # 获取粉丝列表，简略信息
 @forum.route('/get_followers', methods=['GET'])
 def get_followers():
-    target_user_id = request.value.get('target_user_id')
+    target_user_id = request.values.get('target_user_id')
     search_content = request.values.get('search_content')
     data_idx = int(request.values.get('data_idx'))
     data_count = int(request.values.get('data_count'))
@@ -742,7 +742,7 @@ def post():
         VALUES(
             {user_id},
             '{text}',
-            {medias},
+            {medias if medias != None else 'null'},
             {label_id}
         )
         RETURNING id
