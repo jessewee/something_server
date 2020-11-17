@@ -593,9 +593,12 @@ def reply():
         return response_json(Codes.PARAM_INCORRECT)
     user_id = session.get('user_id')
     text = request.values.get('text')
-    medias = request.values.get('medias')
-    if is_empty_str(text) and is_empty_collection(medias):
+    medias_tmp = request.values.getlist('medias[]')
+    if is_empty_str(text) and is_empty_collection(medias_tmp):
         return response_json(Codes.PARAM_INCORRECT)
+    medias = []
+    for t in medias_tmp:
+        medias.append(int(t))
     resp_data = {}
     db = connect_db()
     cursor = db.cursor()
@@ -714,11 +717,14 @@ def post():
     user_id = session.get('user_id')
     label = request.values.get('label')
     text = request.values.get('text')
-    medias = request.values.get('medias')
+    medias_tmp = request.values.getlist('medias[]')
     if is_empty_str(label):
         return response_json(Codes.PARAM_INCORRECT)
-    if is_empty_str(text) and is_empty_collection(medias):
+    if is_empty_str(text) and is_empty_collection(medias_tmp):
         return response_json(Codes.PARAM_INCORRECT)
+    medias = []
+    for t in medias_tmp:
+        medias.append(int(t))
     resp_data = {}
     db = connect_db()
     cursor = db.cursor()
