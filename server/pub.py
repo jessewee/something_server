@@ -53,7 +53,7 @@ def connect_db():
     return conn
 
 
-# 返回数据格式，code是枚举Code的值
+# 返回数据格式，code是枚举Codes的值
 def response_json(code, data=None):
     if data == None:
         return json.dumps({'code': code.value, 'msg': code.msg()})

@@ -253,51 +253,51 @@ def update_user_info():
     db = connect_db()
     cursor = db.cursor()
     # 检查重名
-    cursor.execute(
-        f'''SELECT COUNT(id) FROM public.user WHERE name = '{name}' ''')
-    existed = cursor.fetchall()
-    if is_not_empty_collection(existed):
-        db.close()
-        return response_json(Codes.NAME_EXISTED)
+    if is_not_empty_str(name):
+        cursor.execute(f'''SELECT id FROM public.user WHERE name = '{name}' ''')
+        existed = cursor.fetchall()
+        if is_not_empty_collection(existed):
+            db.close()
+            return response_json(Codes.NAME_EXISTED)
     # 组装sql
     sql_part_value = ''
     if is_not_empty_str(name):
-        sql_part_value = f'name={name}'
+        sql_part_value = f'''name='{name}' '''
     if is_not_empty_str(avatar):
         if len(sql_part_value) == 0:
-            sql_part_value = f'avatar={avatar}'
+            sql_part_value = f'''avatar='{avatar}' '''
         else:
-            sql_part_value += f',avatar={avatar}'
+            sql_part_value += f''',avatar='{avatar}' '''
     if is_not_empty_str(avatar_thumb):
         if len(sql_part_value) == 0:
-            sql_part_value = f'avatar_thumb={avatar_thumb}'
+            sql_part_value = f'''avatar_thumb='{avatar_thumb}' '''
         else:
-            sql_part_value += f',avatar_thumb={avatar_thumb}'
+            sql_part_value += f''',avatar_thumb='{avatar_thumb}' '''
     if is_not_empty_str(gender):
         if len(sql_part_value) == 0:
-            sql_part_value = f'gender={gender}'
+            sql_part_value = f'''gender='{gender}' '''
         else:
-            sql_part_value += f',gender={gender}'
+            sql_part_value += f''',gender='{gender}' '''
     if is_not_empty_str(birthday):
         if len(sql_part_value) == 0:
-            sql_part_value = f'birthday={birthday}'
+            sql_part_value = f'''birthday='{birthday}' '''
         else:
-            sql_part_value += f',birthday={birthday}'
+            sql_part_value += f''',birthday='{birthday}' '''
     if is_not_empty_str(register_date):
         if len(sql_part_value) == 0:
-            sql_part_value = f'register_date={register_date}'
+            sql_part_value = f'''register_date='{register_date}' '''
         else:
-            sql_part_value += f',register_date={register_date}'
+            sql_part_value += f''',register_date='{register_date}' '''
     if is_not_empty_str(email):
         if len(sql_part_value) == 0:
-            sql_part_value = f'email={email}'
+            sql_part_value = f'''email='{email}' '''
         else:
-            sql_part_value += f',email={email}'
+            sql_part_value += f''',email='{email}' '''
     if is_not_empty_str(remark):
         if len(sql_part_value) == 0:
-            sql_part_value = f'remark={remark}'
+            sql_part_value = f'''remark='{remark}' '''
         else:
-            sql_part_value += f',remark={remark}'
+            sql_part_value += f''',remark='{remark}' '''
     cursor.execute(
         f'UPDATE public.user SET {sql_part_value} WHERE id = {user_id}')
     db.commit()
@@ -310,7 +310,8 @@ def update_user_info():
 def upload():
     if request.files == None or len(request.files) == 0:
         return response_json(Codes.NO_FILE_RECEIVED)
-    file = request.files['file']
+    file_keys = list(request.files.keys())
+    file = request.files[file_keys[0]]
     file_data = file.read()
     if len(file_data) == 0:
         return response_json(Codes.NO_FILE_RECEIVED)
