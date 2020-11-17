@@ -6,11 +6,11 @@ from forum import forum
 import time
 import uuid
 import os
-from pub import response_json, connect_db, DEBUG, is_empty_collection
+from pub import response_json, connect_db, DEBUG, is_empty_collection, PRIVATE_FILE_DIR
 from error_codes import Codes
 
 
-app = Flask(__name__, template_folder='templates', static_folder='static')
+app = Flask(__name__, template_folder='templates', static_folder='data/public', static_url_path='/files')
 app.config.update(RESTFUL_JSON=dict(ensure_ascii=False))
 app.secret_key = 'OJDAOonangoijJKLSDGOdfg'
 app.config['JSON_AS_ASCII'] = False  # 返回中文是编码，需要把这个设置False。（没管用）
@@ -29,7 +29,7 @@ app.register_blueprint(forum, url_prefix='/forum')
 # 设置日志相关
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('app')
-file_handler = logging.FileHandler('data/logs/app.log')
+file_handler = logging.FileHandler(f'{PRIVATE_FILE_DIR}logs/app.log')
 file_handler.setLevel(logging.ERROR)
 file_handler.setFormatter(logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
@@ -43,10 +43,13 @@ apis_without_token = ['/', '/login', '/get_vf_code', '/register', '/reset_pwd', 
                       '/forum/get_posts', '/forum/get_floors', '/forum/get_inner_floors', '/forum/get_post_labels']
 
 
+# 是否是访问静态文件
+def is_static_file(path):
+    return path.startswith('/files/')
+
+
 # 通过refresh_token重新获取token
 def refresh_token_and_generate_new():
-    if request.path in apis_without_token:
-        return None
     refresh_token = request.headers.get('refresh_token')
     if refresh_token == None:
         return None
@@ -98,7 +101,7 @@ def refresh_token_and_generate_new():
 
 # 验证token
 def check_token():
-    if request.path in apis_without_token or request.headers.get('refresh_token') != None:
+    if request.headers.get('refresh_token') != None:
         return None
     token = request.headers.get('token')
     if token == None or session.get('token') != token:
@@ -126,6 +129,12 @@ def before_request():
             logI(f'请求参数---{k}:{request.values.get(k)}')
         for k in request.headers:
             logI(f'请求header---{k}:{request.headers.get(k)}')
+    # 文件
+    if is_static_file(request.path):
+        return None
+    # 不需要验证token
+    if request.path in apis_without_token:
+        return None
     # 通过refresh_token重新获取token
     result = refresh_token_and_generate_new()
     if result != None:
@@ -140,6 +149,9 @@ def before_request():
 @app.after_request
 def after_request(response):
     logI('---------------------------------在每次请求之后运行（请求没有异常）')
+    # 文件
+    if is_static_file(request.path):
+        return response
     if request.path in apis_without_token:
         # 返回参数
         if DEBUG == True:

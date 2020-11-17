@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 from flask import Blueprint, request, session
-from pub import connect_db, response_json, is_empty_str, is_empty_collection, is_not_empty_str, is_not_empty_collection
+from pub import *
 from error_codes import Codes
 
 __all__ = ['forum']
@@ -16,7 +16,7 @@ forum = Blueprint(
 
 # 设置日志相关
 logger = logging.getLogger('forum')
-file_handler = logging.FileHandler('data/logs/forum.log')
+file_handler = logging.FileHandler(f'{PRIVATE_FILE_DIR}logs/forum.log')
 file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))

@@ -8,6 +8,9 @@ import datetime
 
 DEBUG = True
 
+PUBLIC_FILE_DIR = f'{os.getcwd()}/data/public/'
+PRIVATE_FILE_DIR = f'{os.getcwd()}/data/private/'
+
 
 # 检查字符串的长度是否为0，有None判断
 def is_empty_str(e):

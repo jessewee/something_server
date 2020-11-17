@@ -23,7 +23,7 @@ base = Blueprint(
 
 # 设置日志相关
 logger = logging.getLogger('base')
-file_handler = logging.FileHandler('data/logs/base.log')
+file_handler = logging.FileHandler(f'{PRIVATE_FILE_DIR}logs/base.log')
 file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
@@ -256,7 +256,7 @@ def update_user_info():
     cursor = db.cursor()
     # 检查重名
     if is_not_empty_str(name):
-        cursor.execute(f'''SELECT id FROM public.user WHERE name = '{name}' ''')
+        cursor.execute(f'''SELECT id FROM public.user WHERE name = '{name}' AND id != {user_id} ''')
         existed = cursor.fetchall()
         if is_not_empty_collection(existed):
             db.close()
@@ -321,35 +321,34 @@ def upload():
     # 源文件保存到本地时的文件名
     file_name_head = time.strftime(r'%y%m%d%H%M%S', time.localtime())
     file_name = file_name_head + str(time.time()).split('.')[1]
-    file_dir = f'{os.getcwd()}/data/'
     thumb_file_path = None
     # 图片文件
     if file_type == 'image':
         file_path = f'images/{file_name}{file.filename[-4:]}'
         file.seek(0) # file.read()后指针指向最后，这时file.save()的话会保存成空白文件
-        file.save(file_dir + file_path)
+        file.save(PUBLIC_FILE_DIR + file_path)
         # 获取缩略图
         im = Image.open(io.BytesIO(file_data))
         if im.size[0] > 360:
             target_h = im.size[1] / im.size[0] * 360
             im.thumbnail((360, target_h))
             thumb_file_path = f'{file_path[:-4]}_thumb{file_path[-4:]}'
-            im.save(file_dir + thumb_file_path)
+            im.save(PUBLIC_FILE_DIR + thumb_file_path)
     # 视频文件
     elif file_type == 'video':
         file_path = f'videos/{file_name}{file.filename[-4:]}'
-        file.save(file_dir + file_path)
+        file.save(PUBLIC_FILE_DIR + file_path)
         # TODO 视频缩略图
         thumb_file_path = ''
     # 音频文件
     elif file_type == 'voice':
         file_path = f'others/{file_name}{file.filename[-4:]}'
-        file.save(file_dir + file_path)
+        file.save(PUBLIC_FILE_DIR + file_path)
     # 未知类型
     else:
         file_type = 'unknown'
         file_path = f'others/{file_name}{file.filename[-4:]}'
-        file.save(file_dir + file_path)
+        file.save(PUBLIC_FILE_DIR + file_path)
     # 保存信息到数据库
     db = connect_db()
     cursor = db.cursor()
