@@ -7,6 +7,8 @@ from flask import Blueprint, request, session
 from pub import *
 from error_codes import Codes
 from PIL import Image
+import io
+import os
 
 
 __all__ = ['base']
@@ -319,33 +321,35 @@ def upload():
     # 源文件保存到本地时的文件名
     file_name_head = time.strftime(r'%y%m%d%H%M%S', time.localtime())
     file_name = file_name_head + str(time.time()).split('.')[1]
+    file_dir = f'{os.getcwd()}/data/'
     thumb_file_path = None
     # 图片文件
     if file_type == 'image':
-        file_path = f'data/images/{file_name}{file.filename[-4:]}'
-        file.save(file_path)
+        file_path = f'images/{file_name}{file.filename[-4:]}'
+        file.seek(0) # file.read()后指针指向最后，这时file.save()的话会保存成空白文件
+        file.save(file_dir + file_path)
         # 获取缩略图
-        im = Image.open(file_path)
+        im = Image.open(io.BytesIO(file_data))
         if im.size[0] > 360:
             target_h = im.size[1] / im.size[0] * 360
             im.thumbnail((360, target_h))
             thumb_file_path = f'{file_path[:-4]}_thumb{file_path[-4:]}'
-            im.save(thumb_file_path)
+            im.save(file_dir + thumb_file_path)
     # 视频文件
     elif file_type == 'video':
-        file_path = f'data/videos/{file_name}{file.filename[-4:]}'
-        file.save(file_path)
+        file_path = f'videos/{file_name}{file.filename[-4:]}'
+        file.save(file_dir + file_path)
         # TODO 视频缩略图
         thumb_file_path = ''
     # 音频文件
     elif file_type == 'voice':
-        file_path = f'data/others/{file_name}{file.filename[-4:]}'
-        file.save(file_path)
+        file_path = f'others/{file_name}{file.filename[-4:]}'
+        file.save(file_dir + file_path)
     # 未知类型
     else:
         file_type = 'unknown'
-        file_path = f'data/others/{file_name}{file.filename[-4:]}'
-        file.save(file_path)
+        file_path = f'others/{file_name}{file.filename[-4:]}'
+        file.save(file_dir + file_path)
     # 保存信息到数据库
     db = connect_db()
     cursor = db.cursor()
