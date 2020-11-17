@@ -594,6 +594,8 @@ def reply():
     user_id = session.get('user_id')
     text = request.values.get('text')
     medias = request.values.get('medias')
+    if is_empty_str(text) and is_empty_collection(medias):
+        return response_json(Codes.PARAM_INCORRECT)
     resp_data = {}
     db = connect_db()
     cursor = db.cursor()
@@ -715,7 +717,7 @@ def post():
     medias = request.values.get('medias')
     if is_empty_str(label):
         return response_json(Codes.PARAM_INCORRECT)
-    if is_all_empty_str(text, medias):
+    if is_empty_str(text) and is_empty_collection(medias):
         return response_json(Codes.PARAM_INCORRECT)
     resp_data = {}
     db = connect_db()
