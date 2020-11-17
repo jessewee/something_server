@@ -42,12 +42,12 @@ def test_api():
 # 获取关注人列表，简略信息
 @forum.route('/get_followings', methods=['GET'])
 def get_followings():
-    target_user_id = request.value.get('target_user_id')
+    target_user_id = request.values.get('target_user_id')
     search_content = request.values.get('search_content')
     db = connect_db()
     cursor = db.cursor()
     user_id = session['user_id']
-    if target_user_id == None:
+    if is_empty_str(target_user_id):
         target_user_id = user_id
     if target_user_id == user_id:
         sql_part_followed = 'true AS followed'
@@ -126,7 +126,6 @@ def get_followers():
                 'gender': r[4],
                 'followed': r[5]
             })
-    db.close()
     # 查总数
     cursor.execute(
         f'SELECT COUNT(id) FROM forum.following WHERE to_user_id = {target_user_id}')
@@ -311,7 +310,7 @@ def get_posts():
     # 筛选条件
     sql_part_condition = ''
     if is_not_empty_str(search_content):
-        sql_part_condition += f'''(WHERE text LIKE '%{search_content}%' OR name LIKE '%{search_content}%')'''
+        sql_part_condition += f'''WHERE text LIKE '%{search_content}%' OR name LIKE '%{search_content}%' '''
     if is_not_empty_str(labels):
         tmp = labels.replace(',', '\',\'')
         tmp = f'''label IN ('{tmp}')'''
@@ -323,7 +322,7 @@ def get_posts():
         cursor.execute(f'''
             UPDATE forum.post_label 
             SET usage = usage+1 
-            WHERE label IN ('{tmp}')
+            WHERE {tmp}
             ''')
         db.commit()
     if is_not_empty_str(users):
@@ -789,6 +788,7 @@ def get_user_info():
             birthday,
             register_date,
             email,
+            remark,
             follower_count,
             following_count,
             {sql_part_followed},
@@ -811,11 +811,12 @@ def get_user_info():
         'birthday': rows[0][5],
         'register_date': rows[0][6],
         'email': rows[0][7],
-        'follower_count': rows[0][8],
-        'following_count': rows[0][9],
-        'followed': rows[0][10],
-        'post_count': rows[0][11],
-        'reply_count': rows[0][12]
+        'remark': rows[0][8],
+        'follower_count': rows[0][9],
+        'following_count': rows[0][10],
+        'followed': rows[0][11],
+        'post_count': rows[0][12],
+        'reply_count': rows[0][13]
     }
     db.close()
     return response_json(Codes.SUCCESS, result)
