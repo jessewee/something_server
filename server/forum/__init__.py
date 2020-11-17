@@ -135,7 +135,7 @@ def get_followers():
     return response_json(Codes.SUCCESS, {
         'list': users,
         'total_count': total_cnt,
-        'last_data_index': data_idx
+        'last_data_index': int(data_idx)
     })
 
 
@@ -155,32 +155,32 @@ def follow():
     existed = is_not_empty_collection(cursor.fetchall())
     # 添加关注
     if follow == True and existed != True:
-        db.execute(f'''
+        db.cursor().execute(f'''
             INSERT INTO forum.following(from_user_id,to_user_id)
             VALUES({user_id},{target_user_id})
         ''')
-        db.execute(f'''
+        db.cursor().execute(f'''
             UPDATE forum.user_forum_info 
             SET follower_count = follower_count+1 
             WHERE user_id = {target_user_id}
             ''')
-        db.execute(f'''
+        db.cursor().execute(f'''
             UPDATE forum.user_forum_info 
             SET following_count = follower_count+1 
             WHERE user_id = {user_id}
             ''')
     # 删除关注
     elif existed == True:
-        db.execute(f'''
+        db.cursor().execute(f'''
             DELETE FROM forum.following 
             WHERE from_user_id = {user_id} AND to_user_id = {target_user_id}
             ''')
-        db.execute(f'''
+        db.cursor().execute(f'''
             UPDATE forum.user_forum_info 
             SET follower_count = follower_count-1 
             WHERE user_id = {target_user_id}
             ''')
-        db.execute(f'''
+        db.cursor().execute(f'''
             UPDATE forum.user_forum_info 
             SET following_count = follower_count-1 
             WHERE user_id = {user_id}
@@ -227,7 +227,7 @@ def change_like_state():
     floor_id = request.values.get('floor_id')
     inner_floor_id = request.values.get('inner_floor_id')
     like = request.values.get('like')
-    if is_empty_str(post_id) and is_empty_str(floor_id) and is_empty_str(inner_floor_id):
+    if is_all_empty_str(post_id, floor_id, inner_floor_id):
         return response_json(Codes.PARAM_INCORRECT)
     user_id = session['user_id']
     db = connect_db()
@@ -382,7 +382,7 @@ def get_posts():
     return response_json(Codes.SUCCESS, {
         'list': posts,
         'total_count': total_cnt,
-        'last_data_index': data_idx
+        'last_data_index': int(data_idx)
     })
 
 
@@ -399,6 +399,14 @@ def get_floors():
     # 查询数据库
     db = connect_db()
     cursor = db.cursor()
+    # 排序条件
+    sql_part_sort = None
+    if sort_by != None and int(sort_by) == 2:
+        sql_part_sort = 'ORDER BY f.reply_count DESC'
+    elif sort_by != None and int(sort_by) == 1:
+        sql_part_sort = 'ORDER BY f.floor DESC'
+    else:
+        sql_part_sort = 'ORDER BY f.floor'
     # 筛选条件
     sql_part_condition = f'WHERE f.post_id = {post_id}'
     if is_not_empty_str(floor_start_idx) and is_not_empty_str(floor_end_idx):
@@ -412,15 +420,7 @@ def get_floors():
         else:
             data_idx = len(cnt_data)
     else:
-        sql_part_condition += f' LIMIT {data_count} OFFSET {data_idx}'
-    # 排序条件
-    sql_part_sort = None
-    if sort_by != None and int(sort_by) == 2:
-        sql_part_sort = 'ORDER BY f.reply_count DESC'
-    elif sort_by != None and int(sort_by) == 1:
-        sql_part_sort = 'ORDER BY f.floor DESC'
-    else:
-        sql_part_sort = 'ORDER BY f.floor'
+        sql_part_sort += f' LIMIT {data_count} OFFSET {data_idx}'
     # 用户已登录的话要查询登录人对帖子的点赞状态
     sql_part_attitude = None
     if user_id == None:
@@ -430,7 +430,7 @@ def get_floors():
                (
                    SELECT attitude FROM forum.attitude_to_floor 
                    WHERE post_base_id = f.id AND user_id = {user_id} LIMIT 1
-               ) AS attitude,
+               ) AS attitude
         '''
     cursor.execute(f'''
         SELECT f.id,
@@ -480,7 +480,7 @@ def get_floors():
     return response_json(Codes.SUCCESS, {
         'list': floors,
         'total_count': total_cnt,
-        'last_data_index': data_idx
+        'last_data_index': int(data_idx) if type(data_idx) == str else data_idx
     })
 
 
@@ -503,7 +503,7 @@ def get_inner_floors():
                (
                    SELECT attitude FROM forum.attitude_to_inner_floor 
                    WHERE post_base_id = f.id AND user_id = {user_id} LIMIT 1
-                ) AS attitude,
+                ) AS attitude
         '''
     cursor.execute(f'''
         SELECT inner.id,
@@ -557,12 +557,14 @@ def get_inner_floors():
     return response_json(Codes.SUCCESS, {
         'list': inner_floors,
         'total_count': total_cnt,
-        'last_data_index': data_idx
+        'last_data_index': int(data_idx)
     })
 
 
 # post、floor、inner_floor中查出来的medias是files表里的id的列表，这个转换成对应数据
 def map_medias(db, src):
+    if is_empty_collection(src):
+        return []
     medias = []
     cursor = db.cursor()
     cursor.execute(f'''
@@ -587,7 +589,7 @@ def reply():
     post_id = request.values.get('post_id')
     floor_id = request.values.get('floor_id')
     inner_floor_id = request.values.get('inner_floor_id')
-    if is_empty_str(post_id) and is_empty_str(floor_id) and is_empty_str(inner_floor_id):
+    if is_all_empty_str(post_id, floor_id, inner_floor_id):
         return response_json(Codes.PARAM_INCORRECT)
     user_id = session.get('user_id')
     text = request.values.get('text')
@@ -619,7 +621,7 @@ def reply():
         resp_data['floor_id'] = id_floor[0]
         resp_data['floor'] = id_floor[1]
         # 帖子信息里增加回复的计数
-        db.execute(f'''
+        db.cursor().execute(f'''
             UPDATE forum.post 
             SET reply_count = reply_count+1 
             WHERE id = {post_id}
@@ -648,7 +650,7 @@ def reply():
         resp_data['inner_floor_id'] = id_inner_floor[0]
         resp_data['inner_floor'] = id_inner_floor[1]
         # 楼层信息里增加回复的计数
-        db.execute(f'''
+        db.cursor().execute(f'''
             UPDATE forum.floor 
             SET reply_count = reply_count+1 
             WHERE id = {floor_id}
@@ -687,13 +689,13 @@ def reply():
         resp_data['inner_floor_id'] = id_inner_floor[0]
         resp_data['inner_floor'] = id_inner_floor[1]
         # 楼层信息里增加回复的计数
-        db.execute(f'''
+        db.cursor().execute(f'''
             UPDATE forum.floor 
             SET reply_count = reply_count+1 
             WHERE id = {floor_id}
             ''')
     # 添加回复计数
-    db.execute(f'''
+    db.cursor().execute(f'''
         UPDATE forum.user_forum_info 
         SET reply_count = reply_count+1 
         WHERE user_id = {user_id}
@@ -711,6 +713,10 @@ def post():
     label = request.values.get('label')
     text = request.values.get('text')
     medias = request.values.get('medias')
+    if is_empty_str(label):
+        return response_json(Codes.PARAM_INCORRECT)
+    if is_all_empty_str(text, medias):
+        return response_json(Codes.PARAM_INCORRECT)
     resp_data = {}
     db = connect_db()
     cursor = db.cursor()
@@ -748,7 +754,7 @@ def post():
         ''')
     resp_data = cursor.fetchone()[0]
     # 添加回复计数
-    db.execute(f'''
+    db.cursor().execute(f'''
         UPDATE forum.user_forum_info 
         SET post_count = post_count+1 
         WHERE user_id = {user_id}
