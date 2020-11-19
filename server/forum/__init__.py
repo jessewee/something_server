@@ -570,7 +570,7 @@ def map_medias(db, src):
     cursor.execute(f'''
         SELECT type,url,thumb_url 
         FROM public.files 
-        WHERE id IN ({src})
+        WHERE id IN ({','.join('%s' %id for id in src)})
         ''')
     rows = cursor.fetchall()
     if is_not_empty_collection(rows):
@@ -645,7 +645,7 @@ def reply():
             VALUES(
                 {user_id},
                 '{text}',
-                {medias},
+                array{medias},
                 (SELECT (CASE WHEN max IS NULL THEN 1 ELSE max+1 END) FROM max_inner_floor),
                 {floor_id}
             )
@@ -755,7 +755,7 @@ def post():
         VALUES(
             {user_id},
             '{text}',
-            {medias if medias != None else 'null'},
+            array{medias},
             {label_id}
         )
         RETURNING id
