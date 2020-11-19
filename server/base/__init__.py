@@ -323,12 +323,16 @@ def upload():
     file_name = file_name_head + str(time.time()).split('.')[1]
     thumb_file_path = None
     # 图片文件
+    width = -1
+    height = -1
     if file_type == 'image':
         file_path = f'images/{file_name}{file.filename[-4:]}'
         file.seek(0) # file.read()后指针指向最后，这时file.save()的话会保存成空白文件
         file.save(PUBLIC_FILE_DIR + file_path)
         # 获取缩略图
         im = Image.open(io.BytesIO(file_data))
+        width = im.size[0]
+        height = im.size[1]
         if im.size[0] > 360:
             target_h = im.size[1] / im.size[0] * 360
             im.thumbnail((360, target_h))
@@ -355,8 +359,8 @@ def upload():
     if thumb_file_path == None:
         thumb_file_path = file_path
     cursor.execute(f'''
-        INSERT INTO public.files(type,url,thumb_url) 
-        VALUES('{file_type}','{file_path}','{thumb_file_path}')
+        INSERT INTO public.files(type,url,thumb_url,width,height) 
+        VALUES('{file_type}','{file_path}','{thumb_file_path}',{width},{height})
         RETURNING id
         ''')
     info = cursor.fetchone()
@@ -364,7 +368,9 @@ def upload():
         'id': info[0],
         'type': file_type,
         'url': file_path,
-        'thumb_url': thumb_file_path
+        'thumb_url': thumb_file_path,
+        'width': width,
+        'height': height
     }
     db.commit()
     db.close()

@@ -568,7 +568,7 @@ def map_medias(db, src):
     medias = []
     cursor = db.cursor()
     cursor.execute(f'''
-        SELECT type,url,thumb_url 
+        SELECT type,url,thumb_url,width,height 
         FROM public.files 
         WHERE id IN ({','.join('%s' %id for id in src)})
         ''')
@@ -578,7 +578,9 @@ def map_medias(db, src):
             medias.append({
                 'type': r[0],
                 'url': r[1],
-                'thumb_url': r[2]
+                'thumb_url': r[2],
+                'width': r[3],
+                'height': r[4]
             })
     return medias
 
