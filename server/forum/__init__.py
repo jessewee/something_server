@@ -598,9 +598,9 @@ def reply():
     medias_tmp = request.values.getlist('medias[]')
     if is_empty_str(text) and is_empty_collection(medias_tmp):
         return response_json(Codes.PARAM_INCORRECT)
-    medias = []
-    for t in medias_tmp:
-        medias.append(int(t))
+    medias = None
+    if is_not_empty_collection(medias_tmp):
+        medias = 'array[' + ','.join(medias_tmp) + ']'
     resp_data = {}
     db = connect_db()
     cursor = db.cursor()
@@ -611,14 +611,14 @@ def reply():
             INSERT INTO forum.floor(
                 poster_id,
                 text,
-                medias,
+                {'' if medias == None else 'medias,'}
                 floor,
                 post_id
             )
             VALUES(
                 {user_id},
                 '{text}',
-                {medias},
+                {'' if medias == None else medias + ','}
                 (SELECT (CASE WHEN max IS NULL THEN 1 ELSE max+1 END) FROM max_floor),
                 {post_id}
             )
@@ -640,14 +640,14 @@ def reply():
             INSERT INTO forum.inner_floor(
                 poster_id,
                 text,
-                medias,
+                {'' if medias == None else 'medias,'}
                 inner_floor,
                 floor_id
             )
             VALUES(
                 {user_id},
                 '{text}',
-                array{medias},
+                {'' if medias == None else medias + ','}
                 (SELECT (CASE WHEN max IS NULL THEN 1 ELSE max+1 END) FROM max_inner_floor),
                 {floor_id}
             )
@@ -679,14 +679,14 @@ def reply():
             INSERT INTO forum.inner_floor(
                 poster_id,
                 text,
-                medias,
+                {'' if medias == None else 'medias,'}
                 inner_floor,
                 floor_id
             )
             VALUES(
                 {user_id},
                 '{text}',
-                {medias},
+                {'' if medias == None else medias + ','}
                 (SELECT (CASE WHEN max IS NULL THEN 1 ELSE max+1 END) FROM max_inner_floor),
                 {floor_id}
             )
@@ -724,9 +724,9 @@ def post():
         return response_json(Codes.PARAM_INCORRECT)
     if is_empty_str(text) and is_empty_collection(medias_tmp):
         return response_json(Codes.PARAM_INCORRECT)
-    medias = []
-    for t in medias_tmp:
-        medias.append(int(t))
+    medias = None
+    if is_not_empty_collection(medias_tmp):
+        medias = 'array[' + ','.join(medias_tmp) + ']'
     resp_data = {}
     db = connect_db()
     cursor = db.cursor()
@@ -751,13 +751,13 @@ def post():
         INSERT INTO forum.post(
             poster_id,
             text,
-            medias,
+            {'' if medias == None else 'medias,'}
             label_id
         )
         VALUES(
             {user_id},
             '{text}',
-            array{medias},
+            {'' if medias == None else medias + ','}
             {label_id}
         )
         RETURNING id
