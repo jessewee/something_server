@@ -254,7 +254,7 @@ def change_like_state():
         ''')
     existed = is_not_empty_collection(cursor.fetchall())
     if existed == True and like == None:
-        cursor.excute(f'''
+        cursor.execute(f'''
             DELETE FROM forum.{table_name}
             WHERE user_id = {user_id} AND post_base_id = {post_base_id}
             ''')
