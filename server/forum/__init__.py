@@ -161,11 +161,11 @@ def follow():
         ''')
         db.cursor().execute(f'''
             INSERT INTO forum.user_forum_info(user_id,follower_count) VALUES({target_user_id},1)
-            ON CONFLICT(user_id) DO UPDATE SET follower_count = follower_count+1 
+            ON CONFLICT(user_id) DO UPDATE SET follower_count = EXCLUDED.follower_count+1 
             ''')
         db.cursor().execute(f'''
             INSERT INTO forum.user_forum_info(user_id,following_count) VALUES({user_id},1)
-            ON CONFLICT(user_id) DO UPDATE SET following_count = following_count+1 
+            ON CONFLICT(user_id) DO UPDATE SET following_count = EXCLUDED.following_count+1 
             ''')
     # 删除关注
     elif existed == True:
@@ -175,11 +175,11 @@ def follow():
             ''')
         db.cursor().execute(f'''
             INSERT INTO forum.user_forum_info(user_id,follower_count) VALUES({target_user_id},1)
-            ON CONFLICT(user_id) DO UPDATE SET follower_count = follower_count+1 
+            ON CONFLICT(user_id) DO UPDATE SET follower_count = EXCLUDED.follower_count+1 
             ''')
         db.cursor().execute(f'''
             INSERT INTO forum.user_forum_info(user_id,following_count) VALUES({user_id},1)
-            ON CONFLICT(user_id) DO UPDATE SET following_count = following_count+1 
+            ON CONFLICT(user_id) DO UPDATE SET following_count = EXCLUDED.following_count+1 
             ''')
     db.commit()
     db.close()
@@ -700,7 +700,7 @@ def reply():
     # 添加回复计数
     db.cursor().execute(f'''
         INSERT INTO forum.user_forum_info(user_id,reply_count) VALUES({user_id},1)
-        ON CONFLICT(user_id) DO UPDATE SET reply_count = reply_count+1 
+        ON CONFLICT(user_id) DO UPDATE SET reply_count = EXCLUDED.reply_count+1 
         ''')
     # 结果
     db.commit()
@@ -761,7 +761,7 @@ def post():
     # 添加发帖计数
     db.cursor().execute(f'''
         INSERT INTO forum.user_forum_info(user_id,post_count) VALUES({user_id},1)
-        ON CONFLICT(user_id) DO UPDATE SET post_count = post_count+1 
+        ON CONFLICT(user_id) DO UPDATE SET post_count = EXCLUDED.post_count+1 
         ''')
     # 结果
     db.commit()
