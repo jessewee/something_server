@@ -26,3 +26,18 @@ services:
       - ./server_data:/home/server/data
     depends_on:
       - db
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: jessewee@hotmail.com
+      PGADMIN_DEFAULT_PASSWORD: 1989
+    ports:
+      - 21212:80
+    volumes:
+     # 启动前需要确保路径能被pgadmin访问，pgadmin的用户id和用户组id是5050:5050
+     # sudo chown -R 5050:5050 pgadmin_data
+     - ./pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - db

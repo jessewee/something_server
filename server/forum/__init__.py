@@ -160,14 +160,12 @@ def follow():
             VALUES({user_id},{target_user_id})
         ''')
         db.cursor().execute(f'''
-            UPDATE forum.user_forum_info 
-            SET follower_count = follower_count+1 
-            WHERE user_id = {target_user_id}
+            INSERT INTO forum.user_forum_info(user_id,follower_count) VALUES({target_user_id},1)
+            ON CONFLICT(user_id) DO UPDATE SET follower_count = follower_count+1 
             ''')
         db.cursor().execute(f'''
-            UPDATE forum.user_forum_info 
-            SET following_count = follower_count+1 
-            WHERE user_id = {user_id}
+            INSERT INTO forum.user_forum_info(user_id,following_count) VALUES({user_id},1)
+            ON CONFLICT(user_id) DO UPDATE SET following_count = following_count+1 
             ''')
     # 删除关注
     elif existed == True:
@@ -176,14 +174,12 @@ def follow():
             WHERE from_user_id = {user_id} AND to_user_id = {target_user_id}
             ''')
         db.cursor().execute(f'''
-            UPDATE forum.user_forum_info 
-            SET follower_count = follower_count-1 
-            WHERE user_id = {target_user_id}
+            INSERT INTO forum.user_forum_info(user_id,follower_count) VALUES({target_user_id},1)
+            ON CONFLICT(user_id) DO UPDATE SET follower_count = follower_count+1 
             ''')
         db.cursor().execute(f'''
-            UPDATE forum.user_forum_info 
-            SET following_count = follower_count-1 
-            WHERE user_id = {user_id}
+            INSERT INTO forum.user_forum_info(user_id,following_count) VALUES({user_id},1)
+            ON CONFLICT(user_id) DO UPDATE SET following_count = following_count+1 
             ''')
     db.commit()
     db.close()
@@ -703,9 +699,8 @@ def reply():
             ''')
     # 添加回复计数
     db.cursor().execute(f'''
-        UPDATE forum.user_forum_info 
-        SET reply_count = reply_count+1 
-        WHERE user_id = {user_id}
+        INSERT INTO forum.user_forum_info(user_id,reply_count) VALUES({user_id},1)
+        ON CONFLICT(user_id) DO UPDATE SET reply_count = reply_count+1 
         ''')
     # 结果
     db.commit()
@@ -734,7 +729,7 @@ def post():
     label_id = None
     if is_not_empty_str(label):
         cursor.execute(
-            f'''SELECT id FROM forum.post_label WHERE label = '%{label}%' LIMIT 1''')
+            f'''SELECT id FROM forum.post_label WHERE label = '{label}' LIMIT 1''')
         tmp = cursor.fetchall()
         if is_not_empty_collection(tmp):
             label_id = tmp[0][0]
@@ -763,11 +758,10 @@ def post():
         RETURNING id
         ''')
     resp_data = cursor.fetchone()[0]
-    # 添加回复计数
+    # 添加发帖计数
     db.cursor().execute(f'''
-        UPDATE forum.user_forum_info 
-        SET post_count = post_count+1 
-        WHERE user_id = {user_id}
+        INSERT INTO forum.user_forum_info(user_id,post_count) VALUES({user_id},1)
+        ON CONFLICT(user_id) DO UPDATE SET post_count = post_count+1 
         ''')
     # 结果
     db.commit()
