@@ -470,7 +470,7 @@ def get_floors():
                 'post_id': r[13]
             })
     # 查总数
-    cursor.execute('SELECT COUNT(id) FROM forum.floor')
+    cursor.execute(f'SELECT COUNT(id) FROM forum.floor WHERE post_id = {post_id}')
     rows = cursor.fetchall()
     total_cnt = rows[0][0]
     # 结果
@@ -544,7 +544,7 @@ def get_inner_floors():
                 'like_count': r[8],
                 'dislike_count': r[9],
                 'name': r[10],
-                'avatar': r[101],
+                'avatar': r[11],
                 'avatar_thumb': r[12],
                 'attitude': r[13],
                 'post_id': r[14],
@@ -622,7 +622,7 @@ def reply():
         # 添加数据
         cursor.execute(f'''
             WITH max_inner_floor AS (
-                SELECT max(inner_floor), 
+                SELECT max(inner_floor) 
                 FROM forum.inner_floor 
                 WHERE floor_id = {floor_id}
             )

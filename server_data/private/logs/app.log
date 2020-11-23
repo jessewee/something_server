@@ -7,3 +7,4 @@
 2020-11-19 03:21:43,919 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', AttributeError("'psycopg2.extensions.cursor' object has no attribute 'excute'"))
 2020-11-19 03:21:47,980 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', AttributeError("'psycopg2.extensions.cursor' object has no attribute 'excute'"))
 2020-11-23 02:57:50,393 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', NotNullViolation('null value in column "post_id" of relation "inner_floor" violates not-null constraint\nDETAIL:  Failing row contains (0, 2, 2020-11-23 02:57:50.265112+00, 阔腿裤, null, 0, 0, 1, null, null, 1).\n'))
+2020-11-23 03:47:08,007 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', SyntaxError('syntax error at or near "FROM"\nLINE 4:                 FROM forum.inner_floor \n                        ^\n'))
