@@ -441,7 +441,8 @@ def get_floors():
             name,
             avatar,
             avatar_thumb,
-            {sql_part_attitude}
+            {sql_part_attitude},
+            post_id
         FROM forum.floor f
         LEFT JOIN public.user u ON f.poster_id = u.id
         {sql_part_condition}
@@ -465,7 +466,8 @@ def get_floors():
                 'name': r[9],
                 'avatar': r[10],
                 'avatar_thumb': r[11],
-                'attitude': r[12]
+                'attitude': r[12],
+                'post_id': r[13]
             })
     # 查总数
     cursor.execute('SELECT COUNT(id) FROM forum.floor')
@@ -498,11 +500,11 @@ def get_inner_floors():
         sql_part_attitude = f'''
                (
                    SELECT attitude FROM forum.attitude_to_inner_floor 
-                   WHERE post_base_id = f.id AND user_id = {user_id} LIMIT 1
+                   WHERE post_base_id = i.id AND user_id = {user_id} LIMIT 1
                 ) AS attitude
         '''
     cursor.execute(f'''
-        SELECT inner.id,
+        SELECT i.id,
             poster_id,
             date,
             text,
@@ -515,13 +517,15 @@ def get_inner_floors():
             u.name,
             u.avatar,
             u.avatar_thumb,
-            {sql_part_attitude}
-        FROM forum.inner_floor inner
-        LEFT JOIN public.user u ON inner.poster_id = u.id
-        LEFT JOIN public.user tu ON inner.target_id = tu.id
-        WHERE inner.floor_id = {floor_id} 
+            {sql_part_attitude},
+            post_id,
+            floor_id
+        FROM forum.inner_floor i
+        LEFT JOIN public.user u ON i.poster_id = u.id
+        LEFT JOIN public.user tu ON i.target_id = tu.id
+        WHERE i.floor_id = {floor_id} 
+        ORDER BY i.inner_floor DESC
         LIMIT {data_count} OFFSET {data_idx}
-        ORDER BY inner.inner_floor DESC
         ''')
     rows = cursor.fetchall()
     inner_floors = []
@@ -542,7 +546,9 @@ def get_inner_floors():
                 'name': r[10],
                 'avatar': r[101],
                 'avatar_thumb': r[12],
-                'attitude': r[13]
+                'attitude': r[13],
+                'post_id': r[14],
+                'floor_id': r[15]
             })
     # 查总数
     cursor.execute('SELECT COUNT(id) FROM forum.inner_floor')
@@ -589,6 +595,12 @@ def reply():
     inner_floor_id = request.values.get('inner_floor_id')
     if is_all_empty_str(post_id, floor_id, inner_floor_id):
         return response_json(Codes.PARAM_INCORRECT)
+    # 回复层主时post_id也必须有
+    if is_not_empty_str(floor_id) and is_empty_str(post_id):
+        return response_json(Codes.PARAM_INCORRECT)
+    # 层内回复时post_id和floor_id也必须有
+    if is_not_empty_str(inner_floor_id) and is_all_empty_str(post_id, floor_id):
+        return response_json(Codes.PARAM_INCORRECT)
     user_id = session.get('user_id')
     text = request.values.get('text')
     medias_tmp = request.values.getlist('medias[]')
@@ -600,8 +612,80 @@ def reply():
     resp_data = {}
     db = connect_db()
     cursor = db.cursor()
+    # 层内回复
+    if is_not_empty_str(inner_floor_id):
+        # 查找对应的floor_id
+        cursor.execute(
+            f'SELECT floor_id FROM forum.inner_floor WHERE id = {inner_floor_id}')
+        tmp = cursor.fetchall()
+        floor_id = tmp[0][0]
+        # 添加数据
+        cursor.execute(f'''
+            WITH max_inner_floor AS (
+                SELECT max(inner_floor), 
+                FROM forum.inner_floor 
+                WHERE floor_id = {floor_id}
+            )
+            INSERT INTO forum.inner_floor(
+                poster_id,
+                text,
+                {'' if medias == None else 'medias,'}
+                inner_floor,
+                post_id,
+                floor_id
+            )
+            VALUES(
+                {user_id},
+                '{text}',
+                {'' if medias == None else medias + ','}
+                (SELECT (CASE WHEN max IS NULL THEN 1 ELSE max+1 END) FROM max_inner_floor),
+                {post_id},
+                {floor_id}
+            )
+            RETURNING id,inner_floor
+            ''')
+        id_inner_floor = cursor.fetchone()
+        resp_data['inner_floor_id'] = id_inner_floor[0]
+        resp_data['inner_floor'] = id_inner_floor[1]
+        # 楼层信息里增加回复的计数
+        db.cursor().execute(f'''
+            UPDATE forum.floor 
+            SET reply_count = reply_count+1 
+            WHERE id = {floor_id}
+            ''')
+    # 回复楼层
+    if is_not_empty_str(floor_id):
+        cursor.execute(f'''
+            WITH max_inner_floor AS (SELECT max(inner_floor) FROM forum.inner_floor WHERE floor_id = {floor_id})
+            INSERT INTO forum.inner_floor(
+                poster_id,
+                text,
+                {'' if medias == None else 'medias,'}
+                inner_floor,
+                post_id,
+                floor_id
+            )
+            VALUES(
+                {user_id},
+                '{text}',
+                {'' if medias == None else medias + ','}
+                (SELECT (CASE WHEN max IS NULL THEN 1 ELSE max+1 END) FROM max_inner_floor),
+                {post_id},
+                {floor_id}
+            )
+            RETURNING id,inner_floor
+            ''')
+        id_inner_floor = cursor.fetchone()
+        resp_data['inner_floor_id'] = id_inner_floor[0]
+        resp_data['inner_floor'] = id_inner_floor[1]
+        # 楼层信息里增加回复的计数
+        db.cursor().execute(f'''
+            UPDATE forum.floor 
+            SET reply_count = reply_count+1 
+            WHERE id = {floor_id}
+            ''')
     # 回复帖子
-    if is_not_empty_str(post_id):
+    else:
         cursor.execute(f'''
             WITH max_floor AS (SELECT max(floor) FROM forum.floor WHERE post_id = {post_id})
             INSERT INTO forum.floor(
@@ -628,74 +712,6 @@ def reply():
             UPDATE forum.post 
             SET reply_count = reply_count+1 
             WHERE id = {post_id}
-            ''')
-    # 回复楼层
-    if is_not_empty_str(floor_id):
-        cursor.execute(f'''
-            WITH max_inner_floor AS (SELECT max(inner_floor) FROM forum.inner_floor WHERE floor_id = {floor_id})
-            INSERT INTO forum.inner_floor(
-                poster_id,
-                text,
-                {'' if medias == None else 'medias,'}
-                inner_floor,
-                floor_id
-            )
-            VALUES(
-                {user_id},
-                '{text}',
-                {'' if medias == None else medias + ','}
-                (SELECT (CASE WHEN max IS NULL THEN 1 ELSE max+1 END) FROM max_inner_floor),
-                {floor_id}
-            )
-            RETURNING id,inner_floor
-            ''')
-        id_inner_floor = cursor.fetchone()
-        resp_data['inner_floor_id'] = id_inner_floor[0]
-        resp_data['inner_floor'] = id_inner_floor[1]
-        # 楼层信息里增加回复的计数
-        db.cursor().execute(f'''
-            UPDATE forum.floor 
-            SET reply_count = reply_count+1 
-            WHERE id = {floor_id}
-            ''')
-    # 层内回复
-    if is_not_empty_str(inner_floor_id):
-        # 查找对应的floor_id
-        cursor.execute(
-            f'SELECT floor_id FROM forum.inner_floor WHERE id = {inner_floor_id}')
-        tmp = cursor.fetchall()
-        floor_id = tmp[0][0]
-        # 添加数据
-        cursor.execute(f'''
-            WITH max_inner_floor AS (
-                SELECT max(inner_floor), 
-                FROM forum.inner_floor 
-                WHERE floor_id = {floor_id}
-            )
-            INSERT INTO forum.inner_floor(
-                poster_id,
-                text,
-                {'' if medias == None else 'medias,'}
-                inner_floor,
-                floor_id
-            )
-            VALUES(
-                {user_id},
-                '{text}',
-                {'' if medias == None else medias + ','}
-                (SELECT (CASE WHEN max IS NULL THEN 1 ELSE max+1 END) FROM max_inner_floor),
-                {floor_id}
-            )
-            RETURNING id,inner_floor
-            ''')
-        id_inner_floor = cursor.fetchone()
-        resp_data['inner_floor_id'] = id_inner_floor[0]
-        resp_data['inner_floor'] = id_inner_floor[1]
-        # 楼层信息里增加回复的计数
-        db.cursor().execute(f'''
-            UPDATE forum.floor 
-            SET reply_count = reply_count+1 
-            WHERE id = {floor_id}
             ''')
     # 添加回复计数
     db.cursor().execute(f'''
