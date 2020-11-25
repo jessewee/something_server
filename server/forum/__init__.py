@@ -804,7 +804,7 @@ def post():
 @forum.route('/get_user_info', methods=['GET'])
 def get_user_info():
     target_user_id = request.values.get('user_id')
-    target_user_name = request.values.get('user_id')
+    target_user_name = request.values.get('user_name')
     if is_all_empty_str(target_user_id, target_user_name):
         return response_json(Codes.PARAM_INCORRECT)
     user_id = session.get('user_id')
