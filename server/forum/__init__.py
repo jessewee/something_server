@@ -822,7 +822,7 @@ def get_user_info():
     if is_not_empty_str(target_user_id):
         sql_part_condition = f'WHERE id = {target_user_id}'
     else:
-        sql_part_condition = f'WHERE name = {target_user_name}'
+        sql_part_condition = f'''WHERE name = '{target_user_name}' '''
     db = connect_db()
     cursor = db.cursor()
     cursor.execute(f'''
