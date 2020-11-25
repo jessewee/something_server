@@ -614,11 +614,12 @@ def reply():
     cursor = db.cursor()
     # 层内回复
     if is_not_empty_str(inner_floor_id):
-        # 查找对应的floor_id
+        # 查找对应的floor_id,target_id
         cursor.execute(
-            f'SELECT floor_id FROM forum.inner_floor WHERE id = {inner_floor_id}')
+            f'SELECT floor_id,poster_id FROM forum.inner_floor WHERE id = {inner_floor_id}')
         tmp = cursor.fetchall()
         floor_id = tmp[0][0]
+        target_id = tmp[0][1]
         # 添加数据
         cursor.execute(f'''
             WITH max_inner_floor AS (
@@ -632,7 +633,8 @@ def reply():
                 {'' if medias == None else 'medias,'}
                 inner_floor,
                 post_id,
-                floor_id
+                floor_id,
+                target_id
             )
             VALUES(
                 {user_id},
@@ -640,7 +642,8 @@ def reply():
                 {'' if medias == None else medias + ','}
                 (SELECT (CASE WHEN max IS NULL THEN 1 ELSE max+1 END) FROM max_inner_floor),
                 {post_id},
-                {floor_id}
+                {floor_id},
+                {target_id}
             )
             RETURNING id,inner_floor
             ''')
