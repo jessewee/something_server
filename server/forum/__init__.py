@@ -551,7 +551,7 @@ def get_inner_floors():
                 'floor_id': r[15]
             })
     # 查总数
-    cursor.execute('SELECT COUNT(id) FROM forum.inner_floor')
+    cursor.execute(f'SELECT COUNT(id) FROM forum.inner_floor WHERE floor_id = {floor_id}')
     rows = cursor.fetchall()
     total_cnt = rows[0][0]
     # 结果
@@ -632,18 +632,18 @@ def reply():
                 text,
                 {'' if medias == None else 'medias,'}
                 inner_floor,
+                target_id,
                 post_id,
-                floor_id,
-                target_id
+                floor_id
             )
             VALUES(
                 {user_id},
                 '{text}',
                 {'' if medias == None else medias + ','}
                 (SELECT (CASE WHEN max IS NULL THEN 1 ELSE max+1 END) FROM max_inner_floor),
+                {target_id},
                 {post_id},
-                {floor_id},
-                {target_id}
+                {floor_id}
             )
             RETURNING id,inner_floor
             ''')
@@ -655,6 +655,12 @@ def reply():
             UPDATE forum.floor 
             SET reply_count = reply_count+1 
             WHERE id = {floor_id}
+            ''')
+        # 帖子信息里增加回复的计数
+        db.cursor().execute(f'''
+            UPDATE forum.post 
+            SET reply_count = reply_count+1 
+            WHERE id = {post_id}
             ''')
     # 回复楼层
     if is_not_empty_str(floor_id):
@@ -686,6 +692,12 @@ def reply():
             UPDATE forum.floor 
             SET reply_count = reply_count+1 
             WHERE id = {floor_id}
+            ''')
+        # 帖子信息里增加回复的计数
+        db.cursor().execute(f'''
+            UPDATE forum.post 
+            SET reply_count = reply_count+1 
+            WHERE id = {post_id}
             ''')
     # 回复帖子
     else:
@@ -792,7 +804,8 @@ def post():
 @forum.route('/get_user_info', methods=['GET'])
 def get_user_info():
     target_user_id = request.values.get('user_id')
-    if target_user_id == None:
+    target_user_name = request.values.get('user_id')
+    if is_all_empty_str(target_user_id, target_user_name):
         return response_json(Codes.PARAM_INCORRECT)
     user_id = session.get('user_id')
     sql_part_followed = None
@@ -802,9 +815,14 @@ def get_user_info():
         sql_part_followed = f'''
             (
                 SELECT COUNT(id) FROM forum.following 
-                WHERE to_user_id = {target_user_id} AND from_user_id = {user_id}
+                WHERE to_user_id = u.id AND from_user_id = {user_id}
             ) > 0 AS followed
             '''
+    sql_part_condition = None
+    if is_not_empty_str(target_user_id):
+        sql_part_condition = f'WHERE id = {target_user_id}'
+    else:
+        sql_part_condition = f'WHERE name = {target_user_name}'
     db = connect_db()
     cursor = db.cursor()
     cursor.execute(f'''
@@ -825,12 +843,12 @@ def get_user_info():
             reply_count
         FROM public.user u
         LEFT JOIN forum.user_forum_info f ON f.user_id = u.id
-        WHERE id = {target_user_id}
+        {sql_part_condition}
         ''')
     rows = cursor.fetchall()
     if is_empty_collection(rows):
         db.close()
-        return response_json(Codes.REFRESH_TOKEN_INVALID)
+        return response_json(Codes.NUSER_NOT_EXIST)
     result = {
         'id': rows[0][0],
         'name': rows[0][1],
