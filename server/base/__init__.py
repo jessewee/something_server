@@ -107,7 +107,7 @@ def register():
     # 处理
     db.cursor().execute(f'''
         INSERT INTO public.user(name,account, pwd, email) 
-        values('{account}','{account}','{pwd}','{email}')
+        values('用户{time.time()}','{account}','{pwd}','{email}')
         ''')
     db.commit()
     db.close()
