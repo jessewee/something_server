@@ -862,7 +862,7 @@ def get_user_info():
         sql_part_followed = f'''
             (
                 SELECT COUNT(id) FROM forum.following 
-                WHERE to_user_id = {target_user_id} AND from_user_id = {user_id}
+                WHERE to_user_id = u.id AND from_user_id = {user_id}
             ) > 0 AS followed
             '''
     sql_part_condition = None
@@ -892,7 +892,6 @@ def get_user_info():
         LEFT JOIN forum.user_forum_info f ON f.user_id = u.id
         {sql_part_condition}
         '''
-    logE('************************************', sql)
     cursor.execute(sql)
     rows = cursor.fetchall()
     if is_empty_collection(rows):
