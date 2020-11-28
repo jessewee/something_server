@@ -1,0 +1,2 @@
+2020-11-27 10:18:17,666 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', <BadRequestKeyError '400: Bad Request'>)
+2020-11-27 10:28:08,660 - app - ERROR - ('---------------------------------每一个请求之后运行，即使遇到了异常', SyntaxError('syntax error at or near ")"\nLINE 1: UPDATE forum.post_label SET usage = usage+1 WHERE id = 0)\n                                                                ^\n'))

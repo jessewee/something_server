@@ -145,6 +145,12 @@ def follow():
     user_id = session['user_id']
     target_user_id = request.values.get('user_id')
     follow = request.values.get('follow')
+    if is_empty_str(target_user_id) or is_empty_str(follow):
+        return response_json(Codes.PARAM_INCORRECT)
+    if follow == 'true':
+        follow = True
+    elif follow == 'false':
+        follow = False
     db = connect_db()
     cursor = db.cursor()
     cursor.execute(f'''
@@ -161,11 +167,11 @@ def follow():
         ''')
         db.cursor().execute(f'''
             INSERT INTO forum.user_forum_info(user_id,follower_count) VALUES({target_user_id},1)
-            ON CONFLICT(user_id) DO UPDATE SET follower_count = EXCLUDED.follower_count+1 
+            ON CONFLICT(user_id) DO UPDATE SET follower_count = forum.user_forum_info.follower_count+1 
             ''')
         db.cursor().execute(f'''
             INSERT INTO forum.user_forum_info(user_id,following_count) VALUES({user_id},1)
-            ON CONFLICT(user_id) DO UPDATE SET following_count = EXCLUDED.following_count+1 
+            ON CONFLICT(user_id) DO UPDATE SET following_count = forum.user_forum_info.following_count+1 
             ''')
     # 删除关注
     elif existed == True:
@@ -175,11 +181,11 @@ def follow():
             ''')
         db.cursor().execute(f'''
             INSERT INTO forum.user_forum_info(user_id,follower_count) VALUES({target_user_id},1)
-            ON CONFLICT(user_id) DO UPDATE SET follower_count = EXCLUDED.follower_count+1 
+            ON CONFLICT(user_id) DO UPDATE SET follower_count = forum.user_forum_info.follower_count-1 
             ''')
         db.cursor().execute(f'''
             INSERT INTO forum.user_forum_info(user_id,following_count) VALUES({user_id},1)
-            ON CONFLICT(user_id) DO UPDATE SET following_count = EXCLUDED.following_count+1 
+            ON CONFLICT(user_id) DO UPDATE SET following_count = forum.user_forum_info.following_count-1 
             ''')
     db.commit()
     db.close()
@@ -222,48 +228,91 @@ def change_like_state():
     post_id = request.values.get('post_id')
     floor_id = request.values.get('floor_id')
     inner_floor_id = request.values.get('inner_floor_id')
-    like = request.values.get('like')
     if is_all_empty_str(post_id, floor_id, inner_floor_id):
         return response_json(Codes.PARAM_INCORRECT)
+    like = request.values.get('like')
+    if like == 'true':
+        like = True
+    elif like == 'false':
+        like = False
     user_id = session['user_id']
     db = connect_db()
     cursor = db.cursor()
-    table_name = None
+    attitude_table_name = None
     post_base_id = None
+    post_base_table_name = None
     # 帖子点赞
     if is_not_empty_str(post_id):
-        table_name = 'attitude_to_post'
+        attitude_table_name = 'attitude_to_post'
         post_base_id = post_id
+        post_base_table_name = 'post'
     # 楼层点赞
     elif is_not_empty_str(floor_id):
-        table_name = 'attitude_to_floor'
+        attitude_table_name = 'attitude_to_floor'
         post_base_id = floor_id
+        post_base_table_name = 'floor'
     # 层内点赞
     elif is_not_empty_str(inner_floor_id):
-        table_name = 'attitude_to_inner_floor'
+        attitude_table_name = 'attitude_to_inner_floor'
         post_base_id = inner_floor_id
+        post_base_table_name = 'inner_floor'
     # 统一处理逻辑
     cursor.execute(f'''
-        SELECT id 
-        FROM forum.{table_name} 
+        SELECT attitude 
+        FROM forum.{attitude_table_name} 
         WHERE user_id = {user_id} AND post_base_id = {post_base_id}
         ''')
-    existed = is_not_empty_collection(cursor.fetchall())
-    if existed == True and like == None:
+    old_attitude = None
+    existed_attitude_result = cursor.fetchall()
+    if is_not_empty_collection(existed_attitude_result):
+        old_attitude = existed_attitude_result[0][0]
+    # 状态没变的话不需要操作
+    if old_attitude == like:
+        return response_json(Codes.SUCCESS)
+    # 之前有点赞点踩现在是取消的情况
+    if old_attitude != None and like == None:
+        # 删除点赞点踩信息
         cursor.execute(f'''
-            DELETE FROM forum.{table_name}
+            DELETE FROM forum.{attitude_table_name}
             WHERE user_id = {user_id} AND post_base_id = {post_base_id}
             ''')
-    elif existed == True and like != None:
+        # 更新对应post或floor或inner_floor的点赞点踩计数
+        colume_name = 'like_count' if old_attitude == True else 'dislike_count'
         cursor.execute(f'''
-            UPDATE forum.{table_name}
-            SET attitude = {like}
-            ''')
-    elif existed == False and like != None:
+            UPDATE forum.{post_base_table_name} 
+            SET {colume_name} = {colume_name}-1 
+            WHERE id = {post_base_id}
+        ''')
+    # 之前没有点赞点踩现在是添加的情况
+    elif old_attitude == None and like != None:
+        # 添加点赞点踩信息
         cursor.execute(f'''
-            INSERT INTO forum.{table_name}(user_id,post_base_id,attitude)
+            INSERT INTO forum.{attitude_table_name}(user_id,post_base_id,attitude)
             VALUES({user_id},{post_base_id},{like})
             ''')
+        # 更新对应post或floor或inner_floor的点赞点踩计数
+        colume_name = 'like_count' if like == True else 'dislike_count'
+        cursor.execute(f'''
+            UPDATE forum.{post_base_table_name} 
+            SET {colume_name} = {colume_name}+1 
+            WHERE id = {post_base_id}
+        ''')
+    # 之前有点赞点踩现在是改变的情况（上边已经判断了新旧态度一样的情况，所以这里else就可以）
+    else:
+        # 改变点赞点踩信息
+        cursor.execute(f'''
+            UPDATE forum.{attitude_table_name}
+            SET attitude = {like}
+            WHERE user_id = {user_id} AND post_base_id = {post_base_id}
+            ''')
+        # 更新对应post或floor或inner_floor的点赞点踩计数
+        lm = '+' if like == True else '-'
+        dm = '-' if like == True else '+'
+        cursor.execute(f'''
+            UPDATE forum.{post_base_table_name} 
+            SET like_count = like_count{lm}1 , dislike_count = dislike_count{dm}1
+            WHERE id = {post_base_id}
+        ''')
     db.commit()
     db.close()
     return response_json(Codes.SUCCESS)
@@ -294,7 +343,7 @@ def get_posts():
                 ) AS attitude,
                (
                    SELECT COUNT(id) FROM forum.following 
-                   WHERE to_user_id = p.id AND from_user_id = {user_id}
+                   WHERE to_user_id = p.poster_id AND from_user_id = {user_id}
                 ) > 0 AS poster_followed
         '''
     # 排序条件
@@ -399,10 +448,8 @@ def get_floors():
     sql_part_sort = None
     if sort_by != None and int(sort_by) == 2:
         sql_part_sort = 'ORDER BY f.reply_count DESC'
-    elif sort_by != None and int(sort_by) == 1:
-        sql_part_sort = 'ORDER BY f.floor DESC'
     else:
-        sql_part_sort = 'ORDER BY f.floor'
+        sql_part_sort = 'ORDER BY f.floor DESC'
     # 筛选条件
     sql_part_condition = f'WHERE f.post_id = {post_id}'
     if is_not_empty_str(floor_start_idx) and is_not_empty_str(floor_end_idx):
@@ -731,7 +778,7 @@ def reply():
     # 添加回复计数
     db.cursor().execute(f'''
         INSERT INTO forum.user_forum_info(user_id,reply_count) VALUES({user_id},1)
-        ON CONFLICT(user_id) DO UPDATE SET reply_count = EXCLUDED.reply_count+1 
+        ON CONFLICT(user_id) DO UPDATE SET reply_count = forum.user_forum_info.reply_count+1 
         ''')
     # 结果
     db.commit()
@@ -765,7 +812,7 @@ def post():
         if is_not_empty_collection(tmp):
             label_id = tmp[0][0]
             cursor.execute(
-                f'''UPDATE forum.post_label SET usage = usage+1 WHERE id = {label_id})''')
+                f'''UPDATE forum.post_label SET usage = usage+1 WHERE id = {label_id}''')
         else:
             cursor.execute(f'''
             INSERT INTO forum.post_label(label) VALUES('{label}')
@@ -792,7 +839,7 @@ def post():
     # 添加发帖计数
     db.cursor().execute(f'''
         INSERT INTO forum.user_forum_info(user_id,post_count) VALUES({user_id},1)
-        ON CONFLICT(user_id) DO UPDATE SET post_count = EXCLUDED.post_count+1 
+        ON CONFLICT(user_id) DO UPDATE SET post_count = forum.user_forum_info.post_count+1 
         ''')
     # 结果
     db.commit()
@@ -809,13 +856,13 @@ def get_user_info():
         return response_json(Codes.PARAM_INCORRECT)
     user_id = session.get('user_id')
     sql_part_followed = None
-    if is_empty_str(user_id):
+    if user_id == None:
         sql_part_followed = 'false AS followed'
     else:
         sql_part_followed = f'''
             (
                 SELECT COUNT(id) FROM forum.following 
-                WHERE to_user_id = u.id AND from_user_id = {user_id}
+                WHERE to_user_id = {target_user_id} AND from_user_id = {user_id}
             ) > 0 AS followed
             '''
     sql_part_condition = None
@@ -825,7 +872,7 @@ def get_user_info():
         sql_part_condition = f'''WHERE name = '{target_user_name}' '''
     db = connect_db()
     cursor = db.cursor()
-    cursor.execute(f'''
+    sql = f'''
         SELECT 
             id,
             name,
@@ -844,7 +891,9 @@ def get_user_info():
         FROM public.user u
         LEFT JOIN forum.user_forum_info f ON f.user_id = u.id
         {sql_part_condition}
-        ''')
+        '''
+    logE('************************************', sql)
+    cursor.execute(sql)
     rows = cursor.fetchall()
     if is_empty_collection(rows):
         db.close()
