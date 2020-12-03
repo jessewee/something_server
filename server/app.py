@@ -20,7 +20,7 @@ app.config['MAIL_SERVER'] = 'smtp.qq.com'
 app.config['MAIL_PORT'] = 587  # 465或587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = 'jessewee@qq.com'
-app.config['MAIL_PASSWORD'] = 'nlfjuoticspbcaeh'  # os.environ['MAIL_PASSWORD']
+app.config['MAIL_PASSWORD'] = os.environ['MAIL_PASSWORD']
 
 # 加载蓝图
 app.register_blueprint(base, url_prefix='/')
