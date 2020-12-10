@@ -896,7 +896,7 @@ def get_user_info():
     rows = cursor.fetchall()
     if is_empty_collection(rows):
         db.close()
-        return response_json(Codes.NUSER_NOT_EXIST)
+        return response_json(Codes.USER_NOT_EXIST)
     result = {
         'id': rows[0][0],
         'name': rows[0][1],

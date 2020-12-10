@@ -206,7 +206,7 @@ def login():
     return response_json(Codes.SUCCESS), 200, {'refresh_token': refresh_token, 'token': token}
 
 
-# 获取用户信息
+# 获取用户信息（登录人）
 @base.route('/get_user_info', methods=['GET'])
 def get_user_info():
     user_id = session.get('user_id')
@@ -375,3 +375,41 @@ def upload():
     db.commit()
     db.close()
     return response_json(Codes.SUCCESS, resp_data)
+
+# 获取用户信息（所有人）
+@base.route('/get_target_user_info', methods=['GET'])
+def get_target_user_info():
+    target_user_id = request.values.get('user_id')
+    target_user_name = request.values.get('user_name')
+    if is_all_empty_str(target_user_id, target_user_name):
+        return response_json(Codes.PARAM_INCORRECT)
+    sql_part_condition = None
+    if is_not_empty_str(target_user_id):
+        sql_part_condition = f'WHERE id = {target_user_id}'
+    else:
+        sql_part_condition = f'''WHERE name = '{target_user_name}' '''
+    db = connect_db()
+    cursor = db.cursor()
+    sql = f'''
+        SELECT id,name,avatar,avatar_thumb,gender,birthday,register_date,email,remark 
+        FROM public.user 
+        {sql_part_condition}
+        '''
+    cursor.execute(sql)
+    rows = cursor.fetchall()
+    if is_empty_collection(rows):
+        db.close()
+        return response_json(Codes.USER_NOT_EXIST)
+    result = {
+        'id': rows[0][0],
+        'name': rows[0][1],
+        'avatar': rows[0][2],
+        'avatar_thumb': rows[0][3],
+        'gender': rows[0][4],
+        'birthday': rows[0][5],
+        'register_date': rows[0][6],
+        'email': rows[0][7],
+        'remark': rows[0][8]
+    }
+    db.close()
+    return response_json(Codes.SUCCESS, result)

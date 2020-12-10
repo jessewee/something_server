@@ -1,0 +1,6 @@
+2020-12-10 03:19:50,903 - app - ERROR - ('Exception', TypeError("'int' object is not subscriptable"))
+2020-12-10 03:40:03,107 - app - ERROR - ('Exception', ValueError('too many values to unpack (expected 2)'))
+2020-12-10 03:48:12,608 - app - ERROR - ('Exception', ValueError('too many values to unpack (expected 2)'))
+2020-12-10 03:54:25,987 - app - ERROR - ('Exception', ValueError('too many values to unpack (expected 2)'))
+2020-12-10 06:09:54,542 - app - ERROR - ('Exception', RuntimeError('dictionary changed size during iteration'))
+2020-12-10 07:17:47,583 - app - ERROR - ('Exception', RuntimeError('dictionary changed size during iteration'))

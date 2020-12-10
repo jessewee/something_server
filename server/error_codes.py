@@ -72,7 +72,7 @@ class Codes(IntEnum):
     # 昵称已存在
     NAME_EXISTED = 10018
     # 用户不存在
-    NUSER_NOT_EXIST = 10019
+    USER_NOT_EXIST = 10019
 
     def msg(self):
         msg = code_messages.get(self.value)

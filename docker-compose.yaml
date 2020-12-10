@@ -41,3 +41,11 @@ services:
      - ./pgadmin_data:/var/lib/pgadmin
     depends_on:
       - db
+
+  chat:
+    build: ./chat
+    restart: always
+    ports:
+      - 21213:8765
+    volumes:
+      - ./chat_data:/home/chat/data
